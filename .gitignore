@@ -67,7 +67,6 @@ db.sqlite3-journal
 instance/
 .webassets-cache
 .flaskenv
-migrations/
 app.db
 
 # Scrapy stuff:

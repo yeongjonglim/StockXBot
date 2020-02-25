@@ -1,2 +1,2 @@
-web: flask db upgrade; gunicorn thestockxbot:app
+web: flask db upgrade; gunicorn stockxbot:app
 clock: python jobs.py
