@@ -11,7 +11,7 @@ def annscrape():
     db.session.commit()
     sentStatus = send_new_announcement(announcements)
 
-@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour=9, timezone='Asia/Kuala_Lumpur')
+@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour=8, timezone='Asia/Kuala_Lumpur')
 def compscrape():
     company_list = company_scrape()
     db.session.commit()

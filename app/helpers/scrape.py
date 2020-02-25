@@ -74,7 +74,7 @@ def announcement_scrape(extract_latest=True):
     announcements = []
     stocks = []
 
-    if len(Company.query.all()) == 0 and extract_latest:
+    if len(Company.query.all()) == 0 and not extract_latest:
         return "Method not allowed."
     elif extract_latest:
         stocks.append('')
