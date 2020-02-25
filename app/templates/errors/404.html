@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Page Not Found</h1>
+    <p class="lead">The link you are looking for is not available.<p>
+    <p class="lead">
+        <a href="{{ url_for('main.index') }}" class="btn btn-lg btn-secondary">Back</a>
+    </p>
+{% endblock %}
