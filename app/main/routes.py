@@ -2,7 +2,7 @@ from flask import render_template, redirect, url_for
 from app.main import bp
 # from app.helpers.scrape import company_scrape, announcement_scrape
 # from app.helpers.telebot_jobs import sendNewAnnouncement
-from app.models import Company
+from app.models import Company, Announcement
 from app import db
 
 @bp.route('/', methods=['GET'])
@@ -23,4 +23,11 @@ def annscrape():
     # print(announcements)
     # sentStatus = sendNewAnnouncement(announcements)
     # print(sentStatus)
+    return redirect(url_for('.index'))
+
+@bp.route('/<ann_id>', methods=['GET'])
+def link_shortner(ann_id):
+    if Announcement.query.filter_by(ann_id=ann_id).first():
+        target_url = 'https://disclosure.bursamalaysia.com/FileAccess/viewHtml?e='+ann_id
+        return redirect(target_url)
     return redirect(url_for('.index'))
