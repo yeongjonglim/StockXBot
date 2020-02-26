@@ -2,6 +2,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from app.helpers.scrape import company_scrape, announcement_scrape
 from app.helpers.telebot_jobs import send_new_announcement
 from app import db
+from app.models import Company
 
 scheduler = BlockingScheduler()
 
@@ -11,13 +12,16 @@ def annscrape():
     app = create_app()
     app.app_context().push()
 
+    if len(Company.query.all()) == 0:
+        compscrape()
+
     announcements = announcement_scrape()
     print(announcements)
     db.session.commit()
     sentStatus = send_new_announcement(announcements)
     return "Annscrape done"
 
-@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour=8, timezone='Asia/Kuala_Lumpur')
+@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-20', timezone='Asia/Kuala_Lumpur')
 def compscrape():
     from app import create_app
     app = create_app()

@@ -17,9 +17,13 @@ def announcement_message(announcement):
     just_in = False
     if announcement.announced_date >= datetime.datetime.now() - datetime.timedelta(days=1):
         just_in = True
+    try:
+        announced_company = announcement.announced_company.company_name
+    except:
+        announced_company = None
     announcement_input = {
             'just_in': just_in,
-            'announced_company': announcement.announced_company.company_name,
+            'announced_company': announced_company,
             'announcement_title': announcement.title,
             'announced_date': str(announcement.announced_date.date().strftime('%d/%m/%Y')),
             'ann_id': announcement.ann_id

@@ -75,7 +75,7 @@ def announcement_scrape(extract_latest=True):
     stocks = []
 
     if len(Company.query.all()) == 0:
-       comp = company_scrape()
+        return "No company exist."
 
     if extract_latest:
         stocks.append('')
@@ -95,33 +95,51 @@ def announcement_scrape(extract_latest=True):
         except:
             return "Search source cannot be found."
 
-        try:
-            announcement_list = search_soup.find("table", {"id": "table-announcements"}).find('tbody').find_all('tr')[:20]
-            for announce in announcement_list:
-                announce_row = announce.find_all('td')
-                stock = announce_row[2].find('a').get('href').split('=')[1]
-                ann_id = announce_row[3].find('a').get('href').split('=')[1]
-                if Announcement.query.filter_by(ann_id=ann_id).first():
-                    continue
-                announcement_date = announce_row[1].text.strip()
-                announcement_details = announce_row[3].find('a').text.strip()
-                if announce_row[3].find('p'):
-                    announcement_details += " - " + announce_row[3].find('p').text.strip().replace('\t',' ').replace('\n',' ').replace('\r','')
-                announcement_info = ANNOUNCEMENT_INFO_URL + ann_id
-                info_source = requests.get(announcement_info)
-                info_soup = BeautifulSoup(info_source.text, 'lxml')
-                announcement_cat = info_soup.find("div", class_="ven_announcement_info").find('table').find_all('tr')[3].find_all('td')[1].text.strip()
-                announcement = Announcement(
-                        category = announcement_cat,
-                        announced_date = datetime.strptime(announcement_date, '%d %b %Y'),
-                        ann_id = ann_id,
-                        announced_company = Company.query.filter_by(stock_code=stock).first(),
-                        title = announcement_details
-                        )
-                announcements.append(announcement)
-                db.session.add(announcement)
-        except:
-            print('No information extracted for stock code ' + stock)
+        # try:
+        announcement_list = search_soup.find("table", {"id": "table-announcements"}).find('tbody').find_all('tr')[:20]
+        for announce in announcement_list:
+            announce_row = announce.find_all('td')
+            try:
+                stock_code = announce_row[2].find('a').get('href').split('=')[1]
+            except:
+                stock_code = ''
+            print("checking for stock_code " + stock_code)
+            ann_id = announce_row[3].find('a').get('href').split('=')[1]
+            if Announcement.query.filter_by(ann_id=ann_id).first():
+                continue
+            print("ann_id found")
+            announcement_date = announce_row[1].text.strip()
+            announcement_details = announce_row[3].find('a').text.strip()
+            print("announcement_details found")
+            if announce_row[3].find('span'):
+                announcement_details += ' ' + announce_row[3].find('span').text.strip()
+            if announce_row[3].find('p'):
+                announcement_details += " - " + announce_row[3].find('p').text.strip().replace('\t',' ').replace('\n',' ').replace('\r','')
+            print(announcement_details)
+            announcement_info = ANNOUNCEMENT_INFO_URL + ann_id
+            print("announcement_info found")
+            info_source = requests.get(announcement_info)
+            print("info_source found")
+            info_soup = BeautifulSoup(info_source.text, 'lxml')
+            print("info_soup found")
+            announcement_cat = info_soup.find("div", class_="ven_announcement_info").find('table').find_all('tr')
+            for ann_cat in announcement_cat:
+                category = ann_cat.find('td', text='Category')
+                if category:
+                    category = category.find_next('td').text.strip()
+                    break
+            print("announcement_cat found" + str(category))
+            announcement = Announcement(
+                    category = category,
+                    announced_date = datetime.strptime(announcement_date, '%d %b %Y'),
+                    ann_id = ann_id,
+                    announced_company = Company.query.filter_by(stock_code=stock_code).first(),
+                    title = announcement_details
+                    )
+            announcements.append(announcement)
+            db.session.add(announcement)
+        # except:
+        #     print('No information extracted for stock code ' + stock)
 
         if stock_ind == len(stocks)-1:
             break
