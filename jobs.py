@@ -21,7 +21,7 @@ def annscrape():
     sentStatus = send_new_announcement(announcements)
     return "Annscrape done"
 
-@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='7,20', timezone='Asia/Kuala_Lumpur')
+@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='7', minute='30', timezone='Asia/Kuala_Lumpur')
 def compscrape():
     from app import create_app
     app = create_app()
