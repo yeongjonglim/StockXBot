@@ -5,11 +5,11 @@ from flask import render_template
 from app.telebot import telegram_bot
 from app.models import Announcement, Company
 
-def send_new_announcement(announcements):
+def send_announcement(announcements, chat_id='@klstockexchange'):
     for announcement in announcements:
         response = announcement_message(announcement)
         if response:
-            telegram_bot.sendMessage(chat_id='@klstockexchange', text=response, parse_mode='HTML')
+            telegram_bot.sendMessage(chat_id=chat_id, text=response, parse_mode='HTML')
             print("Announcement sent.")
     return "Job done."
 
