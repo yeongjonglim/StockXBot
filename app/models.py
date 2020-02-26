@@ -17,7 +17,7 @@ class Company(db.Model):
 
 class Announcement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    category = db.Column(db.String(64))
+    category = db.Column(db.String(128))
     announced_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     ann_id = db.Column(db.String(16), unique=True, nullable=False)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'))
