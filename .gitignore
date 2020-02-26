@@ -68,6 +68,7 @@ instance/
 .webassets-cache
 .flaskenv
 app.db
+app.db-journal
 
 # Scrapy stuff:
 .scrapy
