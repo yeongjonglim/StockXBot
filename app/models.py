@@ -21,7 +21,7 @@ class Announcement(db.Model):
     announced_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     ann_id = db.Column(db.String(16), unique=True, nullable=False)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'))
-    title = db.Column(db.String(256))
+    title = db.Column(db.String(1024))
 
     def __repr__(self):
         return '<Announcement {}>'.format(self.title)
