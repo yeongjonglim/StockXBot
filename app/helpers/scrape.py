@@ -148,4 +148,5 @@ def announcement_scrape(extract_latest=True):
             progress = round(stock_ind/(len(stocks)-1)*100, 2)
             print('\r{}% done...'.format(progress), end='', flush=True)
 
+    announcements.reverse()
     return announcements
