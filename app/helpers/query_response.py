@@ -4,6 +4,7 @@ import datetime
 
 def announcement_message(announcements):
     announcement_inputs = []
+    announcements = list(announcements)
     for announcement in announcements:
         just_in = False
         if announcement.announced_date >= datetime.datetime.now() - datetime.timedelta(days=1):

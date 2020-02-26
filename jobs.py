@@ -7,13 +7,24 @@ scheduler = BlockingScheduler()
 
 @scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-20', minute='0-59', second='0-59/10', timezone='Asia/Kuala_Lumpur')
 def annscrape():
+    from app import create_app
+    app = create_app()
+    app.app_context().push()
+
     announcements = announcement_scrape()
+    print(announcements)
     db.session.commit()
     sentStatus = send_new_announcement(announcements)
+    return "Annscrape done"
 
 @scheduler.scheduled_job('cron', day_of_week='mon-fri', hour=8, timezone='Asia/Kuala_Lumpur')
 def compscrape():
+    from app import create_app
+    app = create_app()
+    app.app_context().push()
+
     company_list = company_scrape()
     db.session.commit()
+    return "Compscrape done"
 
 scheduler.start()

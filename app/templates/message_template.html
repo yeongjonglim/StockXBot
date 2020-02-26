@@ -1,8 +1,6 @@
-{% for announcement_input in announcement_inputs %}
 [{% if announcement_input["just_in"] %}Just In {% endif %}Announcement - {{ announcement_input["announced_date"] }}]
 {{ announcement_input["announced_company"] }}
 
 {{ announcement_input["announcement_title"] }}
 
 https://disclosure.bursamalaysia.com/FileAccess/viewHtml?e={{ announcement_input["ann_id"] }}
-{% endfor %}

@@ -104,7 +104,8 @@ def announcement_scrape(extract_latest=True):
                     continue
                 announcement_date = announce_row[1].text.strip()
                 announcement_details = announce_row[3].find('a').text.strip()
-                announcement_details += " - " + announce_row[3].find('p').text.strip().replace('\t',' ').replace('\n',' ').replace('\r','')
+                if announce_row[3].find('p'):
+                    announcement_details += " - " + announce_row[3].find('p').text.strip().replace('\t',' ').replace('\n',' ').replace('\r','')
                 announcement_info = ANNOUNCEMENT_INFO_URL + ann_id
                 info_source = requests.get(announcement_info)
                 info_soup = BeautifulSoup(info_source.text, 'lxml')
