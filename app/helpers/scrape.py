@@ -32,14 +32,15 @@ def company_scrape():
         stock_results = stock_soup.find('table').find('tbody', class_="font-xsmall").find_all('tr')
         for stock_result in stock_results:
             stock_code = stock_result.find_all('td')[2].text.strip()
+            print("examining stock_code..."+stock_code)
             if Company.query.filter_by(stock_code=stock_code).first():
                 continue
             stock_name = stock_result.find_all('td')[1].text.strip().split(' ')[0]
             last_done = stock_result.find_all('td')[4].text.strip()
             volume = stock_result.find_all('td')[8].text.strip()
-            company_info = COMPANY_INFO_URL + stock_code
 
             # Request the site's HTML in text format then render in lxml markup
+            company_info = COMPANY_INFO_URL + stock_code
             try:
                 company_source = requests.get(company_info)
             except:
