@@ -1,7 +1,7 @@
 from flask import url_for, request
 import telegram
 from app.telebot import bp, telegram_bot
-from app.helpers import query_response
+from app.helpers.telebot_jobs import send_announcement
 from app.models import Announcement, Company
 import os
 
@@ -15,7 +15,7 @@ def setupWebhook():
     else:
         return "webhook not ok"
 
-@bp.route('/receivedMessage'+telebot_token,  methods=['POST'])
+@bp.route('/receivedMessage{}'.format(telebot_token),  methods=['POST'])
 def receivedMessage():
     # retrieve the message in JSON and then transform it to Telegram object
     update = telegram.Update.de_json(request.get_json(force=True), telegram_bot)
@@ -28,7 +28,7 @@ def receivedMessage():
     print("Got text message: ", text)
 
     queried_company = Company.query.filter_by(stock_name=text).first()
-    response = query_response.announcement_message(Announcement.query.filter_by(announced_company=queried_company).all())
-    telegram_bot.sendMessage(chat_id=chat_id, text=response, parse_mode='HTML')
+    queried_announcements = Announcement.query.filter_by(announced_company=queried_company).order_by(Announcement.id).limit(3).all()
+    sent_status = send_announcement(queried_announcements, chat_id=chat_id)
 
     return 'ok', 200

@@ -1,6 +1,6 @@
 from apscheduler.schedulers.blocking import BlockingScheduler
 from app.helpers.scrape import company_scrape, announcement_scrape
-from app.helpers.telebot_jobs import send_new_announcement
+from app.helpers.telebot_jobs import send_announcement
 from app import db
 from app.models import Company
 
@@ -18,7 +18,7 @@ def annscrape():
     announcements = announcement_scrape()
     print(announcements)
     db.session.commit()
-    sentStatus = send_new_announcement(announcements)
+    sentStatus = send_announcement(announcements)
     return "Annscrape done"
 
 @scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='7', timezone='Asia/Kuala_Lumpur')
