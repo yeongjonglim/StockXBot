@@ -2,7 +2,7 @@ import telegram
 import os
 import datetime
 from flask import render_template
-from app.telebot import telegram_bot
+from app import telegram_bot
 from app.models import Announcement, Company
 
 def send_announcement(announcements, chat_id='@klstockexchange'):

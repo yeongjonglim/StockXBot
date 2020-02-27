@@ -2,9 +2,14 @@ from flask import Flask
 from config import Config
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+import telegram
+import os
 
 db = SQLAlchemy()
 migrate = Migrate()
+
+telebot_token = os.environ.get('TELEBOT_TOKEN')
+telegram_bot = telegram.Bot(telebot_token)
 
 def create_app(config_class=Config):
     app = Flask(__name__)

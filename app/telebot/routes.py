@@ -1,11 +1,10 @@
 from flask import url_for, request
 import telegram
-from app.telebot import bp, telegram_bot
-from app.helpers.telebot_jobs import send_announcement
+from app.telebot import bp
 from app.models import Announcement, Company
+from app.helpers.telebot_jobs import send_announcement
+from app import telebot_token, telegram_bot
 import os
-
-telebot_token = os.environ.get('TELEBOT_TOKEN')
 
 @bp.route('/setwebhook', methods=['GET', 'POST'])
 def setupWebhook():
