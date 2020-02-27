@@ -9,7 +9,7 @@ class Company(db.Model):
     company_name = db.Column(db.String(128), index=True, nullable=False)
     company_site = db.Column(db.String(256))
     market = db.Column(db.String(32), nullable=False)
-    sector = db.Column(db.String(32), nullable=False)
+    sector = db.Column(db.String(64), nullable=False)
     announcements = db.relationship('Announcement', backref='announced_company', lazy='dynamic')
 
     def __repr__(self):
