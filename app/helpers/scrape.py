@@ -97,7 +97,7 @@ def announcement_scrape(extract_latest=True):
             return "Search source cannot be found."
 
         try:
-            announcement_list = search_soup.find("table", {"id": "table-announcements"}).find('tbody').find_all('tr')[:2]
+            announcement_list = search_soup.find("table", {"id": "table-announcements"}).find('tbody').find_all('tr')[:20]
             for announce in announcement_list:
                 announce_row = announce.find_all('td')
                 try:
