@@ -21,8 +21,13 @@ def receivedMessage():
     update = telegram.Update.de_json(request.get_json(force=True), telegram_bot)
     print(update)
 
-    chat_id = update.message.chat.id
-    msg_id = update.message.message_id
+    try:
+        chat_id = update.message.chat.id
+        msg_id = update.message.message_id
+    except:
+        print("chat_id and msg_id not found")
+        chat_id = None
+        msg_id = None
 
     if chat_id and msg_id:
         # Telegram understands UTF-8, so encode text for unicode compatibility
