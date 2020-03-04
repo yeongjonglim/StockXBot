@@ -33,6 +33,7 @@ class Announcement(db.Model):
         return '<Announcement {}>'.format(self.title)
 
 class TelegramSubscriber(db.Model):
+    __tablename__ = "telegramsubscriber"
     id = db.Column(db.Integer, primary_key=True)
     chat_id = db.Column(db.Integer, index=True, unique=True, nullable=False)
     joined_datetime = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
