@@ -40,7 +40,7 @@ class TelegramSubscriber(db.Model):
     subscribed_company = db.relationship('Company', secondary=subscribe, backref='subscriber', lazy='dynamic')
 
     def __repr__(self):
-        return '<TelegramSubsriber {}>'.format(self.chat_id)
+        return '<TelegramSubscriber {}>'.format(self.chat_id)
 
     def subscribes(self, company):
         if not self.has_subscribed(company):
