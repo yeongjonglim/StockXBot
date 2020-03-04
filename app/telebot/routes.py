@@ -8,7 +8,7 @@ import os
 
 @bp.route('/setwebhook', methods=['GET', 'POST'])
 def setupWebhook():
-    webhook = telegram_bot.setWebhook('{url}'.format(url=os.environ.get('TELEBOT_URL')+url_for('.receivedMessage')+telebot_token))
+    webhook = telegram_bot.setWebhook('{url}'.format(url=os.environ.get('HOST_URL')+url_for('.receivedMessage')+telebot_token))
     if webhook:
         return "webhook ok"
     else:
