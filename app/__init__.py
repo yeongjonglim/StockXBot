@@ -1,9 +1,10 @@
+import os
 from flask import Flask
-from config import Config
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from elasticsearch import Elasticsearch
+from config import Config
 import telegram
-import os
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -17,6 +18,8 @@ def create_app(config_class=Config):
 
     db.init_app(app)
     migrate.init_app(app, db)
+
+    app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) if app.config['ELASTICSEARCH_URL'] else None
 
     from app.main import bp as main_bp
     app.register_blueprint(main_bp)

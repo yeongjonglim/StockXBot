@@ -1,33 +1,39 @@
+import os
 from apscheduler.schedulers.blocking import BlockingScheduler
-from app.helpers.scrape import company_scrape, announcement_scrape
-from app.helpers.telebot_jobs import send_announcement
 from app import db
-from app.models import Company
+from app.models import Company, Announcement
+from app.telebot.helper import send_telegram
 
 scheduler = BlockingScheduler()
 
-@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-19', minute='0-59', second='0-59/10', timezone='Asia/Kuala_Lumpur')
+#@scheduler.scheduled_job('cron', day_of_week='sun', hour='8-19', minute='0-59', second='0-59/30', timezone='Asia/Kuala_Lumpur')
+@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-23', minute='0-59', second='0-59/10', timezone='Asia/Kuala_Lumpur')
+#@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-20', minute='0-59', second='0-59/10', timezone='Asia/Kuala_Lumpur')
 def annscrape():
     from app import create_app
     app = create_app()
     app.app_context().push()
 
-    if len(Company.query.all()) == 0:
-        compscrape()
-
-    announcements = announcement_scrape()
+    announcements = Announcement.announcement_scrape()
     print(announcements)
     db.session.commit()
-    sentStatus = send_announcement(announcements)
+    for announcement in announcements:
+        recipients = announcement.subscriber()
+        chats = []
+        for recipient in recipients:
+            chats.append(recipient.chat_id)
+        chats.append(os.environ.get('TARGET_CHANNEL'))
+        send_telegram(objects=[announcement], chat_id=chats, message_function=Announcement.announcement_message)
     return "Annscrape done"
 
-@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='7', timezone='Asia/Kuala_Lumpur')
+@scheduler.scheduled_job('cron', day_of_week='mon', hour='8-20', minute='0-59', second='0-59/30', timezone='Asia/Kuala_Lumpur')
+# @scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='7', timezone='Asia/Kuala_Lumpur')
 def compscrape():
     from app import create_app
     app = create_app()
     app.app_context().push()
 
-    company_list = company_scrape()
+    company_list = Company.company_scrape()
     db.session.commit()
     return "Compscrape done"
 

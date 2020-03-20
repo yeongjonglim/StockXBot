@@ -69,6 +69,7 @@ instance/
 .flaskenv
 app.db
 app.db-journal
+*.csv
 
 # Scrapy stuff:
 .scrapy
