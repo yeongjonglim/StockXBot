@@ -73,8 +73,9 @@ class Company(SearchableMixin, db.Model):
     def __repr__(self):
         return '<Company {}>'.format(self.stock_name)
 
-    def company_message(self, counter):
-        return render_template('telebot/company_template.html', company_input=self, counter=counter, target_url=COMPANY_INFO_URL)
+    @staticmethod
+    def company_message(companies, message=None):
+        return render_template('telebot/company_template.html', message=message, companies=companies, company_url=COMPANY_INFO_URL)
 
     @staticmethod
     def company_scrape():
@@ -157,16 +158,20 @@ class Announcement(db.Model):
             just_in = True
         try:
             announced_company = self.announced_company.company_name
+            announced_company_code = self.announced_company.stock_code
         except:
             announced_company = None
-        target_url = os.environ.get('HOST_URL')
+            announced_company_code = None
+        host_url = os.environ.get('HOST_URL')
         announcement_input = {
                 'just_in': just_in,
                 'announced_company': announced_company,
+                'announced_company_code': announced_company_code,
                 'announcement_title': self.title,
                 'announced_date': str(self.announced_date.date().strftime('%d/%m/%Y')),
                 'ann_id': self.ann_id,
-                'target_url': target_url
+                'host_url': host_url,
+                'company_url': COMPANY_INFO_URL
                 }
         return render_template('telebot/announcement_template.html', announcement_input=announcement_input)
 

@@ -4,7 +4,7 @@ import dialogflow_v2 as dialogflow
 from app import telegram_bot
 from app.models import Company, TelegramSubscriber, Announcement
 
-def send_telegram(objects=None, chat_id=None, collate=False, message_function=None):
+def send_telegram(objects=None, chat_id=None, collate=False, message_function=None, **kwargs):
     """
     This function will take in list of objects to iterate them, generate the message using message_function according to collating flag.
     If no message_function is provided, the function will send the message from objects argument, the object will not be manipulated in any way.
@@ -14,20 +14,16 @@ def send_telegram(objects=None, chat_id=None, collate=False, message_function=No
         telegram_bot.sendMessage(chat_id=chat_id[0], text=objects, parse_mode='HTML')
     else:
         if collate:
-            final_resp = ''
-            counter = 0
-            for obj in objects:
-                counter += 1
-                response = message_function(obj, counter=counter)
-                final_resp += response + '\n'
-            if not len(final_resp) == 0:
-                final_resp += '\nTotal of ' + str(len(objects)) + ' results found.'
+            print("Generating response template...")
+            response = message_function(objects, **kwargs)
+            print("Reponse template generated.")
+            if not len(response) == 0:
                 for chat in chat_id:
-                    telegram_bot.sendMessage(chat_id=chat, text=final_resp, parse_mode='HTML')
+                    telegram_bot.sendMessage(chat_id=chat, text=response, parse_mode='HTML')
         else:
             print("non collating selected")
             for obj in objects:
-                response = message_function(obj)
+                response = message_function(obj, **kwargs)
                 if response:
                     for chat in chat_id:
                         print("Sending to ..." + str(chat))
@@ -56,11 +52,12 @@ def check_intent(chat_id, text):
         comp = Company.query.filter_by(stock_code=company).first()
         user = TelegramSubscriber.query.filter_by(chat_id=chat_id).first()
 
+        # Checking the combination between comp, company(user input), user(user from database) and intent to guess what is the user trying to do.
         if intent == "defaultFallbackIntent" or intent == "defaultWelcomeIntent" or intent == "getAgentInformation" or (intent == 'unsubscribeCompany' and not company) or (intent == 'getAnnouncement' and not company) or (intent == 'subscribeCompany' and not company):
             send_telegram(objects=fulfillment_text, chat_id=[chat_id])
         elif not comp and company:
             query, total = Company.search(company, 1, 10)
-            send_telegram(objects=query.all(), chat_id=[chat_id], collate=True, message_function=Company.company_message)
+            send_telegram(objects=query.all(), chat_id=[chat_id], collate=True, message_function=Company.company_message, message="More than one stock is matching to your query, please specify your selection further:")
         elif user and comp and intent == "unsubscribeCompany":
             if user.subs_company.filter_by(stock_code=company).first():
                 user.unsubscribes(comp)
@@ -84,10 +81,11 @@ def check_intent(chat_id, text):
                     send_telegram(objects="Welcome onboard! Thank you for your first subscription on " + comp.company_name, chat_id=[chat_id])
         elif user and not comp:
             if intent == 'getSubscribedCompany':
-                send_telegram(objects=user.subscribed_company, chat_id=[chat_id], collate=True, message_function=Company.company_message)
+                send_telegram(objects=user.subscribed_company, chat_id=[chat_id], collate=True, message_function=Company.company_message, message="Thank you for subscribing, this is your subscription list:")
         else:
             send_telegram(objects="Sorry, we are unable to find " + company, chat_id=[chat_id])
 
+        # Checking if it is last item, if last then break else go next
         if not companies or company_ind == len(companies)-1:
             break
         else:

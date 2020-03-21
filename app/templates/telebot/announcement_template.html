@@ -1,6 +1,6 @@
 [{% if announcement_input["just_in"] %}Just In {% endif %}Announcement - {{ announcement_input["announced_date"] }}]
-{% if announcement_input["announced_company"] %}{{ announcement_input["announced_company"] }}
-{% endif %}
+{% if announcement_input["announced_company"] %}<a href="{{ announcement_input['company_url'] }}{{ announcement_input['announced_company_code'] }}">{{ announcement_input["announced_company"] }}</a>{% endif %}
+
 {{ announcement_input["announcement_title"] }}
 
-{{ announcement_input["target_url"] }}/{{ announcement_input["ann_id"] }}
+&#128073;&#127996; {{ announcement_input["host_url"] }}/{{ announcement_input["ann_id"] }}

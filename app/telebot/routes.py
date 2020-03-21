@@ -20,18 +20,14 @@ def receivedMessage():
     update = telegram.Update.de_json(request.get_json(force=True), telegram_bot)
     print(update)
 
-    try:
-        chat_id = update.message.chat.id
-        msg_id = update.message.message_id
+    chat_id = update.message.chat.id
+    msg_id = update.message.message_id
 
-        # Telegram understands UTF-8, so encode text for unicode compatibility
-        text = update.message.text.encode('utf-8').decode()
-        print("Got text message: ", text)
+    # Telegram understands UTF-8, so encode text for unicode compatibility
+    text = update.message.text.encode('utf-8').decode()
+    print("Got text message: ", text)
 
-        check_intent(chat_id, text)
-        db.session.commit()
-
-    except:
-        print("Error in receivedMessage")
+    check_intent(chat_id, text)
+    db.session.commit()
 
     return 'ok', 200

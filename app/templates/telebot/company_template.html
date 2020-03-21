@@ -1,1 +1,7 @@
-{{ counter }}. <a href="{{ target_url }}{{ company_input.stock_code }}">{{ company_input.stock_name }}: {{ company_input.company_name }}</a>
+{%- if message -%}
+    {{ message }}
+{% endif %}
+{% for company_input in companies -%}
+{{ loop.index }}. <a href="{{ company_url }}{{ company_input.stock_code }}">{{ company_input.stock_name }}: {{ company_input.company_name }}</a>
+{% endfor %}
+Total of {{ companies|length }} companies found.
