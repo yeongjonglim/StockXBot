@@ -6,9 +6,7 @@ from app.telebot.helper import send_telegram
 
 scheduler = BlockingScheduler()
 
-#@scheduler.scheduled_job('cron', day_of_week='sun', hour='8-19', minute='0-59', second='0-59/30', timezone='Asia/Kuala_Lumpur')
-@scheduler.scheduled_job('cron', day_of_week='sat', hour='8-23', minute='0-59', second='0-59/10', timezone='Asia/Kuala_Lumpur')
-#@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-20', minute='0-59', second='0-59/10', timezone='Asia/Kuala_Lumpur')
+@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-21', minute='0-59', second='0-59/10', timezone='Asia/Kuala_Lumpur')
 def annscrape():
     from app import create_app
     app = create_app()
@@ -26,8 +24,7 @@ def annscrape():
         send_telegram(objects=[announcement], chat_id=chats, message_function=Announcement.announcement_message)
     return "Annscrape done"
 
-@scheduler.scheduled_job('cron', day_of_week='mon', hour='8-20', minute='0-59', second='0-59/30', timezone='Asia/Kuala_Lumpur')
-# @scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='7', timezone='Asia/Kuala_Lumpur')
+@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='7', timezone='Asia/Kuala_Lumpur')
 def compscrape():
     from app import create_app
     app = create_app()
