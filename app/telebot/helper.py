@@ -3,6 +3,7 @@ import os
 import dialogflow_v2 as dialogflow
 from app import telegram_bot
 from app.models import Company, TelegramSubscriber, Announcement
+from flask import current_app
 
 def send_telegram(objects=None, chat_id=None, collate=False, message_function=None, **kwargs):
     """
@@ -55,7 +56,7 @@ def check_intent(chat_id, text):
         # Checking the combination between comp, company(user input), user(user from database) and intent to guess what is the user trying to do.
         if intent == "defaultFallbackIntent" or intent == "defaultWelcomeIntent" or intent == "getAgentInformation" or (intent == 'unsubscribeCompany' and not company) or (intent == 'getAnnouncement' and not company) or (intent == 'subscribeCompany' and not company):
             send_telegram(objects=fulfillment_text, chat_id=[chat_id])
-        elif not comp and company:
+        elif current_app.elasticsearch and (not comp and company):
             query, total = Company.search(company, 1, 10)
             send_telegram(objects=query.all(), chat_id=[chat_id], collate=True, message_function=Company.company_message, message="More than one stock is matching to your query, please specify your selection further:")
         elif user and comp and intent == "unsubscribeCompany":
@@ -79,11 +80,10 @@ def check_intent(chat_id, text):
                     db.session.add(user)
                     user.subscribes(comp)
                     send_telegram(objects="Welcome onboard! Thank you for your first subscription on " + comp.company_name, chat_id=[chat_id])
-        elif user and not comp:
-            if intent == 'getSubscribedCompany':
-                send_telegram(objects=user.subscribed_company, chat_id=[chat_id], collate=True, message_function=Company.company_message, message="Thank you for subscribing, this is your subscription list:")
+        elif user and not comp and intent == 'getSubscribedCompany':
+            send_telegram(objects=user.subscribed_company, chat_id=[chat_id], collate=True, message_function=Company.company_message, message="Thank you for subscribing, this is your subscription list:")
         else:
-            send_telegram(objects="Sorry, we are unable to find " + company, chat_id=[chat_id])
+            send_telegram(objects="Sorry, we are unable to understand you, try asking me what can I do.", chat_id=[chat_id])
 
         # Checking if it is last item, if last then break else go next
         if not companies or company_ind == len(companies)-1:
