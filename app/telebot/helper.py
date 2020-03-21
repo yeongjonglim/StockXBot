@@ -1,7 +1,7 @@
 import telegram
 import os
 import dialogflow_v2 as dialogflow
-from app import telegram_bot
+from app import telegram_bot, db
 from app.models import Company, TelegramSubscriber, Announcement
 from flask import current_app
 
