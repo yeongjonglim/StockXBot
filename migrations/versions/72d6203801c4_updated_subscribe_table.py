@@ -25,9 +25,9 @@ def upgrade():
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_telegram_subscriber_chat_id'), 'telegram_subscriber', ['chat_id'], unique=True)
-    op.drop_constraint(None, 'subscribe', type_='foreignkey')
     op.drop_index('ix_telegramsubscriber_chat_id', table_name='telegramsubscriber')
     op.drop_table('telegramsubscriber')
+    op.drop_constraint(None, 'subscribe', type_='foreignkey')
     op.create_foreign_key(None, 'subscribe', 'telegram_subscriber', ['telegram_id'], ['id'])
     # ### end Alembic commands ###
 
