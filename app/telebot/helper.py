@@ -43,7 +43,6 @@ def check_intent(chat_id, text):
     response = detect_intent_text(os.environ.get('PROJECT_ID'), chat_id, text, 'en')
     intent = response.query_result.intent.display_name
     companies = response.query_result.parameters.fields.get('company').list_value.values if response.query_result.parameters.fields.get('company') else None
-    print(companies)
     fulfillment_text = response.query_result.fulfillment_text
 
     company_ind = 0

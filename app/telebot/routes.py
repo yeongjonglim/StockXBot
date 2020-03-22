@@ -1,14 +1,17 @@
+import os
 from flask import url_for, request
 import telegram
 from app import telebot_token, telegram_bot, db
+from app.models import Company
 from app.telebot import bp
 from app.telebot.helper import check_intent, send_telegram
-import os
 
 @bp.route('/setwebhook', methods=['GET', 'POST'])
 def setupWebhook():
-    print(os.environ.get('HOST_URL')+'/telebot/receivedMessage'+telebot_token)
-    webhook = telegram_bot.setWebhook('{url}'.format(url=os.environ.get('HOST_URL')+'/telebot/receivedMessage'+telebot_token))
+    url = os.environ.get('HOST_URL')+url_for('.receivedMessage')
+    print(url)
+    webhook = telegram_bot.setWebhook('{url}'.format(url=url))
+    Company.reindex()
     if webhook:
         return "webhook ok"
     else:
@@ -27,7 +30,10 @@ def receivedMessage():
     text = update.message.text.encode('utf-8').decode()
     print("Got text message: ", text)
 
-    check_intent(chat_id, text)
-    db.session.commit()
+    if text:
+        check_intent(chat_id, text)
+        db.session.commit()
+    else:
+        print("No text provided.")
 
     return 'ok', 200
