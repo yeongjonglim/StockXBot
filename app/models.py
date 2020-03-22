@@ -3,6 +3,7 @@ import requests
 import time
 from datetime import datetime, timedelta
 from flask import current_app, render_template
+from sqlalchemy.orm import backref
 from bs4 import BeautifulSoup
 from app import db
 from app.search import add_to_index, remove_from_index, query_index
@@ -67,8 +68,8 @@ class Company(SearchableMixin, db.Model):
     company_site = db.Column(db.String(256))
     market = db.Column(db.String(32), nullable=False)
     sector = db.Column(db.String(64), nullable=False)
-    announcement = db.relationship('Announcement', backref='announced_company', lazy='dynamic')
-    subs_user = db.relationship('TelegramSubscriber', secondary=subscribe, backref='subscribed_company', lazy='dynamic')
+    announcement = db.relationship('Announcement', backref='announced_company', lazy='dynamic', order_by='desc(Announcement.announced_date)')
+    subs_user = db.relationship('TelegramSubscriber', secondary=subscribe, backref=backref('subscribed_company', order_by=stock_name), lazy='dynamic')
 
     def __repr__(self):
         return '<Company {}>'.format(self.stock_name)

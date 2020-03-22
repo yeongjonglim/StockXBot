@@ -81,6 +81,7 @@ def check_intent(chat_id, text):
                     user.subscribes(comp)
                     send_telegram(objects="Welcome onboard! Thank you for your first subscription on " + comp.company_name, chat_id=[chat_id])
         elif user and not comp and intent == 'getSubscribedCompany':
+            print(user.subscribed_company)
             send_telegram(objects=user.subscribed_company, chat_id=[chat_id], collate=True, message_function=Company.company_message, message="Thank you for subscribing, this is your subscription list:")
         else:
             send_telegram(objects="Sorry, we are unable to understand you, try asking me what can I do.", chat_id=[chat_id])
