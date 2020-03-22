@@ -11,7 +11,6 @@ def setupWebhook():
     url = os.environ.get('HOST_URL')+url_for('.receivedMessage')
     print(url)
     webhook = telegram_bot.setWebhook('{url}'.format(url=url))
-    Company.reindex()
     if webhook:
         return "webhook ok"
     else:
