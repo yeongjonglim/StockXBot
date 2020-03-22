@@ -58,6 +58,7 @@ def check_intent(chat_id, text):
             send_telegram(objects=fulfillment_text, chat_id=[chat_id])
         elif current_app.elasticsearch and (not comp and company):
             query, total = Company.search(company, 1, 10)
+            detect_intent_text(os.environ.get('PROJECT_ID'), chat_id, intent, 'en')
             send_telegram(objects=query.all(), chat_id=[chat_id], collate=True, message_function=Company.company_message, message="More than one stock is matching to your query, please specify your selection further:")
         elif user and comp and intent == "unsubscribeCompany":
             if user.subs_company.filter_by(stock_code=company).first():

@@ -2,6 +2,6 @@
     {{ message }}
 {% endif %}
 {% for company_input in companies -%}
-{{ loop.index }}. <a href="{{ company_url }}{{ company_input.stock_code }}">{{ company_input.stock_name }}: {{ company_input.company_name }}({{ company_input.stock_code }})</a>
+{{ loop.index }}. <a href="{{ company_url }}{{ company_input.stock_code }}">{{ company_input.stock_name }}: {{ company_input.company_name }} ({{ company_input.stock_code }})</a>
 {% endfor %}
 Total of {{ companies|length }} companies found.
