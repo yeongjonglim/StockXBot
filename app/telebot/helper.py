@@ -101,7 +101,6 @@ def check_intent(chat, text, callback_query=False):
 
         elif intent == "defaultWelcomeIntent":
             response_text = "Hi {}, I will be your handler to fetch stock announcements from Bursa Malaysia. Feel free to explore my capabilities with /help.".format(chat.first_name)
-            markup = [[telegram.InlineKeyboardButton(text="ℹ️ Help", callback_data="getAgentInformation")]]
 
         elif intent == "getAgentInformation":
             response_text = render_template('telebot/agent_info_template.html', user_name=chat.first_name)
@@ -123,9 +122,6 @@ def check_intent(chat, text, callback_query=False):
                 # no company is typed
                 detect_intent_text(os.environ.get('PROJECT_ID'), chat_id, intent, 'en')
                 response_text = 'Please input the stock name that you are interested in.'
-                markup = [
-                    [telegram.InlineKeyboardButton(text="ℹ️ Back to Help", callback_data="getAgentInformation")]
-                    ]
             elif not comp and current_app.elasticsearch:
                 # no specific company is found in db
                 response_text = 'This is the list of stocks that are nearest to your input.'
@@ -165,7 +161,7 @@ def check_intent(chat, text, callback_query=False):
                 response_text = "Thank you! You are now subscribed to {}.".format(comp.stock_name)
                 markup = [[
                     telegram.InlineKeyboardButton(text="Subscribe", callback_data="subscribeCompany"),
-                    telegram.InlineKeyboardButton(text="Unsubscribe", callback_data="unsubscribeCompany")
+                    telegram.InlineKeyboardButton(text="Undo", callback_data="unsubscribeCompany@{}".format(comp.stock_code))
                     ],
                     [telegram.InlineKeyboardButton(text="Check Subscription", callback_data="getSubscribedCompany"),
                     telegram.InlineKeyboardButton(text="ℹ️ Back to Help", callback_data="getAgentInformation")]
@@ -200,10 +196,11 @@ def check_intent(chat, text, callback_query=False):
                 user.unsubscribes(comp)
                 response_text = "Thank you! You are now unsubscribed from {}.".format(comp.stock_name)
                 markup = [[
-                    telegram.InlineKeyboardButton(text="Subscribe", callback_data="subscribeCompany"),
-                    telegram.InlineKeyboardButton(text="Unsubscribe", callback_data="unsubscribeCompany")
+                    telegram.InlineKeyboardButton(text="Unsubscribe", callback_data="unsubscribeCompany"),
+                    telegram.InlineKeyboardButton(text="Undo", callback_data="subscribeCompany@{}".format(comp.stock_code))
                     ],
-                    [telegram.InlineKeyboardButton(text="Check Subscription", callback_data="getSubscribedCompany")]
+                    [telegram.InlineKeyboardButton(text="Check Subscription", callback_data="getSubscribedCompany"),
+                    telegram.InlineKeyboardButton(text="ℹ️ Back to Help", callback_data="getAgentInformation")]
                     ]
             else:
                 # user has not subcribed to the specific company
@@ -212,7 +209,8 @@ def check_intent(chat, text, callback_query=False):
                     telegram.InlineKeyboardButton(text="Subscribe", callback_data="subscribeCompany"),
                     telegram.InlineKeyboardButton(text="Unsubscribe", callback_data="unsubscribeCompany")
                     ],
-                    [telegram.InlineKeyboardButton(text="Check Subscription", callback_data="getSubscribedCompany")]
+                    [telegram.InlineKeyboardButton(text="Check Subscription", callback_data="getSubscribedCompany"),
+                    telegram.InlineKeyboardButton(text="ℹ️ Back to Help", callback_data="getAgentInformation")]
                     ]
 
         elif intent == "getSubscribedCompany":
