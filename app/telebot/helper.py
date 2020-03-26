@@ -237,6 +237,8 @@ def check_intent(chat, text, callback_query=False):
             markup.append([telegram.InlineKeyboardButton(text="ℹ️ Back to Help", callback_data="getAgentInformation")])
 
         elif intent == "getAnnouncement":
+            # blocking all getAnnouncement intent for now
+            return check_intent(chat, "defaultFallbackIntent", callback_query=True)
             if not company:
                 # no user input for company
                 response_text = 'Please input the company name that you are interested in.'
