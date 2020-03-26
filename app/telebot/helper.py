@@ -33,7 +33,6 @@ def send_telegram(objects=None, chat_id=None, collate=False, message_function=No
                         telegram_bot.send_message(chat_id=chat, text=response, parse_mode='HTML')
 
 def pagination_button(total, page, per_page, target_intent, company=None):
-    print(total, page, per_page, target_intent, company)
     has_next = (total - (page*per_page)) > 0
     has_prev = page > 1
     buttons = []
