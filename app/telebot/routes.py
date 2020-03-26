@@ -6,15 +6,12 @@ from app.models import Company
 from app.telebot import bp
 from app.telebot.helper import check_intent, send_telegram
 
-@bp.route('/setwebhook', methods=['GET', 'POST'])
+@bp.before_app_first_request
 def setupWebhook():
-    url = os.environ.get('HOST_URL')+url_for('.receivedMessage')
+    url = os.environ.get('HOST_URL')+url_for('{}.receivedMessage'.format(bp.name))
     print(url)
     webhook = telegram_bot.setWebhook('{url}'.format(url=url))
-    if webhook:
-        return "webhook ok"
-    else:
-        return "webhook not ok"
+    print('Webhook object: ' + str(webhook))
 
 @bp.route('/receivedMessage{}'.format(telebot_token),  methods=['POST'])
 def receivedMessage():
@@ -22,17 +19,35 @@ def receivedMessage():
     update = telegram.Update.de_json(request.get_json(force=True), telegram_bot)
     print(update)
 
-    chat_id = update.message.chat.id
-    msg_id = update.message.message_id
+    if update.message:
+        message = update.message
+        chat = update.message.chat
 
-    # Telegram understands UTF-8, so encode text for unicode compatibility
-    text = update.message.text.encode('utf-8').decode()
-    print("Got text message: ", text)
+        # Telegram understands UTF-8, so encode text for unicode compatibility
+        text = update.message.text.encode('utf-8').decode()
+        print("Got text message: ", text)
 
-    if text:
-        check_intent(chat_id, text)
-        db.session.commit()
+        chat.send_action('TYPING')
+
+        response = check_intent(chat, text)
+        reply_markup = telegram.InlineKeyboardMarkup(response["markup"]) if response["markup"] else None
+
+        message.reply_text(text=response["response_text"], reply_markup=reply_markup, parse_mode='HTML')
+
+    elif update.callback_query:
+        callback_query = update.callback_query
+        chat = callback_query.message.chat
+        text = callback_query.data
+
+        response = check_intent(chat, text, callback_query=True)
+        callback_query.answer()
+        reply_markup = telegram.InlineKeyboardMarkup(response["markup"]) if response["markup"] else None
+
+        callback_query.edit_message_text(text=response["response_text"], reply_markup=reply_markup, parse_mode='HTML')
+
     else:
-        print("No text provided.")
+        print("Unknown type of request.")
+
+    db.session.commit()
 
     return 'ok', 200
