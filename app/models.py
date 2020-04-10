@@ -245,7 +245,7 @@ class Announcement(db.Model):
                             title = announcement_details
                             )
                     announcements.append(announcement)
-                    db.session.add(announcement)
+                    # db.session.add(announcement)
             except:
                 print('No information extracted for stock code ' + stock)
 
