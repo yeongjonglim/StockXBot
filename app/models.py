@@ -70,7 +70,6 @@ class Company(SearchableMixin, db.Model):
     sector = db.Column(db.String(64), nullable=False)
     announcement = db.relationship('Announcement', backref='announced_company', lazy='dynamic', order_by='desc(Announcement.announced_date)')
     subscriber = db.relationship('TelegramSubscriber', secondary=subscribe, back_populates='subscribed_company', lazy='dynamic')
-    # backref=backref('subscribed_company', order_by=stock_name),
 
     def __repr__(self):
         return '<Company {}>'.format(self.stock_name)
@@ -211,32 +210,24 @@ class Announcement(db.Model):
                         stock_code = announce_row[2].find('a').get('href').split('=')[1]
                     except:
                         stock_code = ''
-                    print("checking for stock_code " + stock_code)
                     ann_id = announce_row[3].find('a').get('href').split('=')[1]
                     if Announcement.query.filter_by(ann_id=ann_id).first():
                         continue
-                    print("ann_id found")
                     announcement_date = announce_row[1].text.strip()
                     announcement_details = announce_row[3].find('a').text.strip()
-                    print("announcement_details found")
                     if announce_row[3].find('span'):
                         announcement_details += ' ' + announce_row[3].find('span').text.strip()
                     if announce_row[3].find('p'):
                         announcement_details += " - " + announce_row[3].find('p').text.strip().replace('\t',' ').replace('\n',' ').replace('\r','')
-                    print(announcement_details)
                     announcement_info = ANNOUNCEMENT_INFO_URL + ann_id
-                    print("announcement_info found")
                     info_source = requests.get(announcement_info)
-                    print("info_source found")
                     info_soup = BeautifulSoup(info_source.text, 'lxml')
-                    print("info_soup found")
                     announcement_cat = info_soup.find("div", class_="ven_announcement_info").find('table').find_all('tr')
                     for ann_cat in announcement_cat:
                         category = ann_cat.find('td', text='Category')
                         if category:
                             category = category.find_next('td').text.strip()
                             break
-                    print("announcement_cat found" + str(category))
                     announcement = Announcement(
                             category = category,
                             announced_date = datetime.strptime(announcement_date, '%d %b %Y'),
@@ -246,6 +237,7 @@ class Announcement(db.Model):
                             )
                     announcements.append(announcement)
                     # db.session.add(announcement)
+                print("List of announcements sending: ", announcements)
             except:
                 print('No information extracted for stock code ' + stock)
 
@@ -254,7 +246,6 @@ class Announcement(db.Model):
             else:
                 stock_ind += 1
                 progress = round(stock_ind/(len(stocks)-1)*100, 2)
-                print('\r{}% done...'.format(progress), end='', flush=True)
 
         announcements.reverse()
         return announcements
