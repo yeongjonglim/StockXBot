@@ -14,7 +14,7 @@ def annscrape():
 
     announcements = Announcement.announcement_scrape()
     print(announcements)
-    # db.session.commit()
+    db.session.commit()
     for announcement in announcements:
         recipients = announcement.subscriber()
         chats = []

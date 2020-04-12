@@ -1,0 +1,10 @@
+Hi admin,
+
+A new feedback has been received from {{ user }}:
+
+{{ feedback_text }}
+
+Thank you.
+
+Sincerely,
+StockXBot@Telegram

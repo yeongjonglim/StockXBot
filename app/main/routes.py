@@ -25,9 +25,7 @@ def annscrape():
     # print(sentStatus)
     return redirect(url_for('.index'))
 
-@bp.route('/<ann_id>', methods=['GET'])
+@bp.route('/ann?id=<ann_id>', methods=['GET'])
 def link_shortner(ann_id):
-    if Announcement.query.filter_by(ann_id=ann_id).first():
-        target_url = 'https://disclosure.bursamalaysia.com/FileAccess/viewHtml?e='+ann_id
-        return redirect(target_url)
-    return redirect(url_for('.index'))
+    target_url = 'https://disclosure.bursamalaysia.com/FileAccess/viewHtml?e='+ann_id
+    return redirect(target_url)

@@ -4,6 +4,7 @@ import dialogflow_v2 as dialogflow
 from flask import current_app, render_template
 from app import telegram_bot, db
 from app.models import Company, TelegramSubscriber, Announcement
+from app.email import send_email
 
 def send_telegram(objects=None, chat_id=None, collate=False, message_function=None, keyboard_button=None, **kwargs):
     """
@@ -85,6 +86,9 @@ def check_intent(chat, text, callback_query=False):
             companies = strings
         fulfillment_text = response.query_result.fulfillment_text
         page = 1
+
+        if user.opt_out == 1:
+            intent = 'optOutFeedback'
 
     company_ind = 0
     while True:
@@ -259,6 +263,14 @@ def check_intent(chat, text, callback_query=False):
             elif intent == 'optOutConfirmed':
                 user.optout()
                 response_text = "Sorry to see you go, please drop us a feedback here and we will improve our bot. Thank you."
+            elif intent == 'optOutFeedback':
+                send_email('Feedback from Telegram User',
+                           sender='no-reply@'+current_app.config['MAIL_SERVER'],
+                           recipients=current_app.config['ADMINS'][0],
+                           text_body=text,
+                           html_body=text
+                           )
+                response_text = "Thank you for your feedback. Our team has received your feedback and we hope to see you again."
             else:
                 response_text = "Are you sure to opt out? Selecting 'Yes' is irreversible and will delete all your subscription record."
                 markup = [[

@@ -56,7 +56,8 @@ db.event.listen(db.session, 'after_commit', SearchableMixin.after_commit)
 
 subscribe = db.Table('subscribe',
     db.Column('telegram_id', db.Integer, db.ForeignKey('telegram_subscriber.id')),
-    db.Column('company_id', db.Integer, db.ForeignKey('company.id'))
+    db.Column('company_id', db.Integer, db.ForeignKey('company.id')),
+    db.Column('price_alert', db.Float)
 )
 
 class Company(SearchableMixin, db.Model):
@@ -68,6 +69,12 @@ class Company(SearchableMixin, db.Model):
     company_site = db.Column(db.String(256))
     market = db.Column(db.String(32), nullable=False)
     sector = db.Column(db.String(64), nullable=False)
+    last_done = db.Column(db.Float, nullable=False)
+    change_absolute = db.Column(db.Float, nullable=False)
+    change_percent = db.Column(db.Float, nullable=False)
+    opening = db.Column(db.Float, nullable=False)
+    closing = db.Column(db.Float, nullable=False)
+    last_update = db.Column(db.Date, nullable=False, default=datetime.utcnow)
     announcement = db.relationship('Announcement', backref='announced_company', lazy='dynamic', order_by='desc(Announcement.announced_date)')
     subscriber = db.relationship('TelegramSubscriber', secondary=subscribe, back_populates='subscribed_company', lazy='dynamic')
 
@@ -236,7 +243,7 @@ class Announcement(db.Model):
                             title = announcement_details
                             )
                     announcements.append(announcement)
-                    # db.session.add(announcement)
+                    db.session.add(announcement)
                 print("List of announcements sending: ", announcements)
             except:
                 print('No information extracted for stock code ' + stock)
@@ -254,6 +261,10 @@ class TelegramSubscriber(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     chat_id = db.Column(db.Integer, index=True, unique=True, nullable=False)
     joined_datetime = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    username = db.Column(db.String, nullable=False)
+    first_name = db.Column(db.String, nullable=True)
+    last_name = db.Column(db.String, nullable=True)
+    opt_out = db.Column(db.Integer, nullable=True, default=0)
     subscribed_company = db.relationship('Company', secondary=subscribe, order_by='Company.stock_name', back_populates='subscriber', lazy='dynamic')
 
     def __repr__(self):
@@ -276,5 +287,5 @@ class TelegramSubscriber(db.Model):
     def has_subscribed(self, company):
         return self.subscribed_company.filter(subscribe.c.company_id == company.id).count() > 0
 
-    def subscribed_announcements(self):
-        return Announcement.query.join(subscribe, (subscribe.c.company_id == Announcement.company_id)).filter(subscribe.c.telegram_id == self.id).order_by(Announcement.announced_date.desc()).all()
+    # def subscribed_announcements(self):
+        # return Announcement.query.join(subscribe, (subscribe.c.company_id == Announcement.company_id)).filter(subscribe.c.telegram_id == self.id).order_by(Announcement.announced_date.desc()).all()
