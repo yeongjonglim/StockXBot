@@ -1,6 +1,6 @@
 Hi admin,
 
-A new feedback has been received from {{ user }}:
+A new feedback has been received {%- if user %} from {{ user }}{% endif %}:
 
 {{ feedback_text }}
 
