@@ -336,7 +336,8 @@ class TelegramSubscriber(db.Model):
     username = db.Column(db.String, nullable=True)
     first_name = db.Column(db.String, nullable=True)
     last_name = db.Column(db.String, nullable=True)
-    status = db.Column(db.Integer, nullable=True, default=0)
+    # Status 0: Inactive, Status 1: Active, Status 2: Pending Feedback
+    status = db.Column(db.Integer, nullable=True, default=1)
     subscribed_company = association_proxy('subscribe', 'company', creator=lambda company: Subscribe(company=company))
 
     def __repr__(self):
@@ -357,20 +358,14 @@ class TelegramSubscriber(db.Model):
         subbed_company = self.subscribed_company
         for sub in subbed_company:
             self.unsubscribes(sub)
-        self.deactivate()
+        self.status = 2
 
     def activate(self):
-        data = {
-            'status': 0
-        }
-        self.update(data)
+        self.status = 1
         return True
 
     def deactivate(self):
-        data = {
-            'status': 1
-        }
-        self.update(data)
+        self.status = 0
         return True
 
     def subscribed_announcements(self):

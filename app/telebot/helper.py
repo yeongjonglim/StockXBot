@@ -33,7 +33,7 @@ def check_intent(chat, text, callback_query=False):
     5. generic intents to handle fallback and default intent
     """
     chat_id = chat.id
-    user = TelegramSubscriber.query.filter_by(chat_id=chat_id).first()
+    user = TelegramSubscriber.query.filter(TelegramSubscriber.chat_id==chat_id, TelegramSubscriber.status!=0).first()
     message = None
     markup = None
     response_text = None
@@ -60,7 +60,7 @@ def check_intent(chat, text, callback_query=False):
         fulfillment_text = response.query_result.fulfillment_text
         page = 1
 
-        if user.status == 1:
+        if user.status == 2:
             intent = 'optOutFeedback'
 
     company_ind = 0
@@ -120,8 +120,12 @@ def check_intent(chat, text, callback_query=False):
                 response_text = "Sorry, I can't find the company you are interested in, can you please specify the company with full name?"
             elif not user:
                 # if new user
-                user = TelegramSubscriber(chat_id=chat_id)
-                db.session.add(user)
+                if TelegramSubscriber.query.filter_by(chat_id=chat_id).first():
+                    user = TelegramSubscriber.query.filter_by(chat_id=chat_id).first()
+                    user.activate()
+                else:
+                    user = TelegramSubscriber(chat_id=chat_id)
+                    db.session.add(user)
                 user.subscribes(comp)
                 response_text = "Welcome {}! Thank you for your first subscription on {}".format(chat.first_name, comp.company_name)
                 markup = [[
@@ -231,13 +235,13 @@ def check_intent(chat, text, callback_query=False):
 
         elif 'optOut' in intent:
             if not user:
-                # user have not subscribed with us before
-                response_text = 'Sorry, you have not subscribed with us before.'
+                # user have not subscribed before
+                response_text = 'Sorry, you are not subscribed to us.'
             elif intent == 'optOutConfirmed':
                 user.optout()
                 response_text = "Sorry to see you go, please drop us a feedback here and we will improve our bot. Thank you."
             elif intent == 'optOutFeedback':
-                user.status = 2
+                user.deactivate()
                 send_email('Feedback from Telegram User',
                            sender='no-reply@'+current_app.config['MAIL_SERVER'],
                            recipients=current_app.config['ADMINS'][0],
