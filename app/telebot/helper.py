@@ -6,33 +6,6 @@ from app import telegram_bot, db
 from app.models import Company, TelegramSubscriber, Announcement
 from app.email import send_email
 
-def send_telegram(objects=None, chat_id=None, collate=False, message_function=None, keyboard_button=None, **kwargs):
-    """
-    This function will take in list of objects to iterate them, generate the message using message_function according to collating flag.
-    If no message_function is provided, the function will send the message from objects argument, the object will not be manipulated in any way.
-    Collating is to allow the message to be sent either in a single message or multiple messages when given a list of objects.
-    """
-    reply_markup = telegram.InlineKeyboardMarkup(keyboard_button) if keyboard_button else None
-    if not message_function:
-        telegram_bot.sendMessage(chat_id=chat_id[0], text=objects, parse_mode='HTML', reply_markup=reply_markup)
-    else:
-        if collate:
-            print("Generating response template...")
-            response = message_function(objects, **kwargs)
-            print("Reponse template generated.")
-            if not len(response) == 0:
-                for chat in chat_id:
-                    telegram_bot.send_message(chat_id=chat, text=response, parse_mode='HTML', reply_markup=reply_markup)
-                        # [[telegram.InlineKeyboardButton(text="start", switch_inline_query_current_chat="Hello World!")]]))
-        else:
-            print("non collating selected")
-            for obj in objects:
-                response = message_function(obj, **kwargs)
-                if response:
-                    for chat in chat_id:
-                        print("Sending to ..." + str(chat))
-                        telegram_bot.send_message(chat_id=chat, text=response, parse_mode='HTML')
-
 def pagination_button(total, page, per_page, target_intent, company=None):
     has_next = (total - (page*per_page)) > 0
     has_prev = page > 1
@@ -87,7 +60,7 @@ def check_intent(chat, text, callback_query=False):
         fulfillment_text = response.query_result.fulfillment_text
         page = 1
 
-        if user.opt_out == 1:
+        if user.status == 1:
             intent = 'optOutFeedback'
 
     company_ind = 0
@@ -264,11 +237,12 @@ def check_intent(chat, text, callback_query=False):
                 user.optout()
                 response_text = "Sorry to see you go, please drop us a feedback here and we will improve our bot. Thank you."
             elif intent == 'optOutFeedback':
+                user.status = 2
                 send_email('Feedback from Telegram User',
                            sender='no-reply@'+current_app.config['MAIL_SERVER'],
                            recipients=current_app.config['ADMINS'][0],
-                           text_body=text,
-                           html_body=text
+                           text_body=render_template('email/feedback.txt', user=user.first_name+' '+user.last_name, feedback_text=text),
+                           html_body=render_template('email/feedback.html', user=user.first_name+' '+user.last_name, feedback_text=text)
                            )
                 response_text = "Thank you for your feedback. Our team has received your feedback and we hope to see you again."
             else:

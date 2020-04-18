@@ -1,19 +1,19 @@
 import os
 from apscheduler.schedulers.blocking import BlockingScheduler
-from app import db
+from app import db, telegram_bot
 from app.models import Company, Announcement
-from app.telebot.helper import send_telegram
 
 scheduler = BlockingScheduler()
 
-@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-21', minute='0-59', second='0-59/10', timezone='Asia/Kuala_Lumpur')
-def annscrape():
+def initiate_app():
     from app import create_app
     app = create_app()
     app.app_context().push()
 
+@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-12,13-19', minute='0-59', second='0', timezone='Asia/Kuala_Lumpur')
+def annscrape():
+    initiate_app()
     announcements = Announcement.announcement_scrape()
-    print(announcements)
     db.session.commit()
     for announcement in announcements:
         recipients = announcement.subscriber()
@@ -21,17 +21,24 @@ def annscrape():
         for recipient in recipients:
             chats.append(recipient.chat_id)
         chats.append(os.environ.get('TARGET_CHANNEL'))
-        send_telegram(objects=[announcement], chat_id=chats, message_function=Announcement.announcement_message)
-    return "Annscrape done"
+
+        response = announcement.announcement_message()
+        if response:
+            for chat in chats:
+                print("Sending to ..." + str(chat))
+                telegram_bot.send_message(chat_id=chat, text=response, parse_mode='HTML')
+
+@scheduler.scheduled_job('cron', day_of_week='mon-sun', hour='3', minute='0', second='0', timezone='Asia/Kuala_Lumpur')
+def anncleaning():
+    initiate_app()
+    Announcement.announcement_cleaning()
+    db.session.commit()
 
 @scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='7', timezone='Asia/Kuala_Lumpur')
 def compscrape():
-    from app import create_app
-    app = create_app()
-    app.app_context().push()
-
+    initiate_app()
     company_list = Company.company_scrape()
     db.session.commit()
-    return "Compscrape done"
 
 scheduler.start()
+

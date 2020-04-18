@@ -1,9 +1,10 @@
 import os
 import requests
 import time
-from datetime import datetime, timedelta
+import datetime
 from flask import current_app, render_template
 from sqlalchemy.orm import backref
+from sqlalchemy.ext.associationproxy import association_proxy
 from bs4 import BeautifulSoup
 from app import db
 from app.search import add_to_index, remove_from_index, query_index
@@ -54,32 +55,51 @@ class SearchableMixin(object):
 db.event.listen(db.session, 'before_commit', SearchableMixin.before_commit)
 db.event.listen(db.session, 'after_commit', SearchableMixin.after_commit)
 
-subscribe = db.Table('subscribe',
-    db.Column('telegram_id', db.Integer, db.ForeignKey('telegram_subscriber.id')),
-    db.Column('company_id', db.Integer, db.ForeignKey('company.id')),
-    db.Column('price_alert', db.Float)
-)
+class Subscribe(db.Model):
+    __tablename__ = 'subscribe'
+    telegram_id = db.Column(db.Integer, db.ForeignKey('telegram_subscriber.id'), primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), primary_key=True)
+    subscribed_datetime = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+    price_alert = db.Column(db.Float)
+    price_alert_status = db.Column(db.Integer, default=0)
+    last_sent = db.Column(db.DateTime)
+    last_update = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+    telegram_subscriber = db.relationship('TelegramSubscriber', backref=backref("subscribe", cascade="all, delete-orphan"))
+    company = db.relationship('Company', backref=backref("subscribe", cascade="all, delete-orphan"), order_by="Company.stock_name", lazy="joined", innerjoin=True)
+
+    def __repr__(self):
+        return '<User {} subscribe {}>'.format(self.telegram_id, self.company_id)
 
 class Company(SearchableMixin, db.Model):
+    __tablename__ = 'company'
     __searchable__ = ['stock_code', 'stock_name', 'company_name']
     id = db.Column(db.Integer, primary_key=True)
     stock_code = db.Column(db.String(8), index=True, unique=True, nullable=False)
-    stock_name = db.Column(db.String(32), index=True, nullable=False)
-    company_name = db.Column(db.String(128), index=True, nullable=False)
-    company_site = db.Column(db.String(256))
+    stock_name = db.Column(db.String(32), unique=True, nullable=False)
+    company_name = db.Column(db.String(128), nullable=False)
+    company_site = db.Column(db.String(256), nullable=True)
     market = db.Column(db.String(32), nullable=False)
     sector = db.Column(db.String(64), nullable=False)
-    last_done = db.Column(db.Float, nullable=False)
-    change_absolute = db.Column(db.Float, nullable=False)
-    change_percent = db.Column(db.Float, nullable=False)
-    opening = db.Column(db.Float, nullable=False)
-    closing = db.Column(db.Float, nullable=False)
-    last_update = db.Column(db.Date, nullable=False, default=datetime.utcnow)
+    last_done = db.Column(db.Float, nullable=True)
+    change_absolute = db.Column(db.Float, nullable=True)
+    change_percent = db.Column(db.Float, nullable=True)
+    opening = db.Column(db.Float, nullable=True)
+    closing = db.Column(db.Float, nullable=True)
+    buy_vol = db.Column(db.Integer, nullable=True)
+    sell_vol = db.Column(db.Integer, nullable=True)
+    last_update = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     announcement = db.relationship('Announcement', backref='announced_company', lazy='dynamic', order_by='desc(Announcement.announced_date)')
-    subscriber = db.relationship('TelegramSubscriber', secondary=subscribe, back_populates='subscribed_company', lazy='dynamic')
+    subscriber = association_proxy('subscribe', 'telegram_subscriber')
 
     def __repr__(self):
         return '<Company {}>'.format(self.stock_name)
+
+    @staticmethod
+    def check_quote(string):
+        if string == '-':
+            return float(0)
+        else:
+            return float(string)
 
     @staticmethod
     def company_message(companies, message=None):
@@ -87,12 +107,20 @@ class Company(SearchableMixin, db.Model):
 
     @staticmethod
     def company_scrape():
-        companies = []
+
+        # Storing current time for Malaysia's timezone
+        tz = datetime.timezone(datetime.timedelta(hours=8))
+        time_now = datetime.datetime.now(tz).time()
+
+        # Morning refresh timing
+        time_start = datetime.time(8, 15)
+        time_end = datetime.time(8, 45)
 
         try:
             stock_source = requests.get(COMPANY_TRADE_URL)
         except:
-            return "Stock source cannot be found."
+            print("Stock source cannot be found.")
+            return True
         stock_soup = BeautifulSoup(stock_source.text, 'lxml')
 
         total_pages = int(stock_soup.find('li', {'id': "total_page"})['data-val'])
@@ -108,48 +136,86 @@ class Company(SearchableMixin, db.Model):
             for stock_result in stock_results:
                 stock_code = stock_result.find_all('td')[2].text.strip()
                 print("examining stock_code..."+stock_code)
-                if Company.query.filter_by(stock_code=stock_code).first():
-                    continue
                 stock_name = stock_result.find_all('td')[1].text.strip().split(' ')[0]
-                last_done = stock_result.find_all('td')[4].text.strip()
-                volume = stock_result.find_all('td')[8].text.strip()
+                last_done = Company.check_quote(stock_result.find_all('td')[4].text.strip())
+                closing = Company.check_quote(stock_result.find_all('td')[5].text.strip())
+                change_absolute = last_done - closing if last_done != 0.0 else float(0)
+                change_percent = (change_absolute / closing)*100
+                buy_vol = int(Company.check_quote(stock_result.find_all('td')[9].text.strip().replace(',', ''))*100)
+                sell_vol = int(Company.check_quote(stock_result.find_all('td')[12].text.strip().replace(',', ''))*100)
 
-                # Request the site's HTML in text format then render in lxml markup
-                company_info = COMPANY_INFO_URL + stock_code
-                try:
-                    company_source = requests.get(company_info)
-                except:
-                    return "Company source cannot be found."
-                company_soup = BeautifulSoup(company_source.text, 'lxml')
+                # Initialising variables
+                company_site = None
+                company_name = None
+                market = None
+                sector = None
+                opening = None
 
-                try:
-                    company_site = company_soup.find('a', {'target': '_blank'}, class_='btn btn-block btn-effect btn-white').get('href')
-                except:
-                    company_site = ""
-                finally:
-                    company_name = company_soup.find('h5', class_='bold text-muted my-2 clear-line-height').text
-                    market = company_soup.find('label', text='Market:').next_sibling.strip()
-                    sector = company_soup.find('label', text='Sector:').next_sibling.strip()
+                if not Company.query.filter_by(stock_code=stock_code).first() or (time_now >= time_start and time_now < time_end):
+                    # Request the site's HTML in text format then render in lxml markup
+                    company_info = COMPANY_INFO_URL + stock_code
+                    try:
+                        company_source = requests.get(company_info)
+                        company_soup = BeautifulSoup(company_source.text, 'lxml')
+                    except:
+                        print("Company source cannot be found.")
+                        continue
+
+                    try:
+                        company_site = company_soup.find('a', {'target': '_blank'}, class_='btn btn-block btn-effect btn-white').get('href')
+                    except:
+                        company_site = ""
+                    finally:
+                        company_name = company_soup.find('h5', class_='bold text-muted my-2 clear-line-height').text
+                        market = company_soup.find('label', text='Market:').next_sibling.strip()
+                        sector = company_soup.find('label', text='Sector:').next_sibling.strip()
+                        opening = Company.check_quote(company_soup.find('th', text='Open').find_next('td').text.strip())
+
+                if Company.query.filter_by(stock_code=stock_code).first():
+                    data = {
+                        'last_done': last_done,
+                        'closing': closing,
+                        'change_absolute': change_absolute,
+                        'change_percent': change_percent,
+                        'buy_vol': buy_vol,
+                        'sell_vol': sell_vol,
+                        'last_update': datetime.datetime.utcnow()
+                    }
+                    if company_site:
+                        data['company_site'] = company_site
+                    if market:
+                        data['market'] = market
+                    if sector:
+                        data['sector'] = sector
+                    if opening:
+                        data['opening'] = opening
+
+                    Company.query.filter_by(stock_code=stock_code).update(data)
+                else:
                     company = Company(
                             stock_code = stock_code,
                             stock_name = stock_name,
                             company_name = company_name,
                             company_site = company_site,
                             market = market,
-                            sector = sector
+                            sector = sector,
+                            last_done = last_done,
+                            opening = opening,
+                            closing = closing,
+                            change_absolute = change_absolute,
+                            change_percent = change_percent,
+                            buy_vol = buy_vol,
+                            sell_vol = sell_vol
                             )
-                    companies.append(company)
                     db.session.add(company)
 
-            progress = round(page/total_pages*100, 2)
-            print('\r{}% done...'.format(progress), end='', flush=True)
-
-        return companies
+        return True
 
 class Announcement(db.Model):
+    __tablename__ = 'announcement'
     id = db.Column(db.Integer, primary_key=True)
     category = db.Column(db.String(128))
-    announced_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    announced_date = db.Column(db.Date, nullable=False, default=datetime.date.today)
     ann_id = db.Column(db.String(16), unique=True, nullable=False)
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'))
     title = db.Column(db.String(1024))
@@ -158,12 +224,10 @@ class Announcement(db.Model):
         return '<Announcement {}>'.format(self.title)
 
     def subscriber(self):
-        return TelegramSubscriber.query.join(subscribe, (subscribe.c.telegram_id == TelegramSubscriber.id)).filter(subscribe.c.company_id == self.company_id).order_by(TelegramSubscriber.chat_id.asc()).all()
+        return TelegramSubscriber.query.join(Subscribe, (Subscribe.telegram_id == TelegramSubscriber.id)).filter(Subscribe.company_id == self.company_id).all()
 
     def announcement_message(self):
-        just_in = False
-        if self.announced_date >= datetime.now() - timedelta(days=1):
-            just_in = True
+        just_in = self.announced_date >= (datetime.datetime.now() - datetime.timedelta(days=1)).date()
         try:
             announced_company = self.announced_company.company_name
             announced_company_code = self.announced_company.stock_code
@@ -176,12 +240,20 @@ class Announcement(db.Model):
                 'announced_company': announced_company,
                 'announced_company_code': announced_company_code,
                 'announcement_title': self.title,
-                'announced_date': str(self.announced_date.date().strftime('%d/%m/%Y')),
+                'announced_date': str(self.announced_date.strftime('%d/%m/%Y')),
                 'ann_id': self.ann_id,
                 'host_url': host_url,
                 'company_url': COMPANY_INFO_URL
                 }
         return render_template('telebot/announcement_template.html', announcement_input=announcement_input)
+
+    @staticmethod
+    def announcement_cleaning(backlog_days=10):
+        delete_date = datetime.datetime.now() - datetime.timedelta(days=backlog_days)
+        delete_date = delete_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        anns = Announcement.query.filter_by(announced_date=delete_date).all()
+        for ann in anns:
+            db.session.delete(ann)
 
     @staticmethod
     def announcement_scrape(extract_latest=True):
@@ -237,14 +309,13 @@ class Announcement(db.Model):
                             break
                     announcement = Announcement(
                             category = category,
-                            announced_date = datetime.strptime(announcement_date, '%d %b %Y'),
+                            announced_date = datetime.datetime.strptime(announcement_date, '%d %b %Y'),
                             ann_id = ann_id,
                             announced_company = Company.query.filter_by(stock_code=stock_code).first(),
                             title = announcement_details
                             )
                     announcements.append(announcement)
                     db.session.add(announcement)
-                print("List of announcements sending: ", announcements)
             except:
                 print('No information extracted for stock code ' + stock)
 
@@ -258,14 +329,15 @@ class Announcement(db.Model):
         return announcements
 
 class TelegramSubscriber(db.Model):
+    __tablename__ = 'telegram_subscriber'
     id = db.Column(db.Integer, primary_key=True)
     chat_id = db.Column(db.Integer, index=True, unique=True, nullable=False)
-    joined_datetime = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    username = db.Column(db.String, nullable=False)
+    joined_datetime = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+    username = db.Column(db.String, nullable=True)
     first_name = db.Column(db.String, nullable=True)
     last_name = db.Column(db.String, nullable=True)
-    opt_out = db.Column(db.Integer, nullable=True, default=0)
-    subscribed_company = db.relationship('Company', secondary=subscribe, order_by='Company.stock_name', back_populates='subscriber', lazy='dynamic')
+    status = db.Column(db.Integer, nullable=True, default=0)
+    subscribed_company = association_proxy('subscribe', 'company', creator=lambda company: Subscribe(company=company))
 
     def __repr__(self):
         return '<TelegramSubscriber {}>'.format(self.chat_id)
@@ -278,14 +350,28 @@ class TelegramSubscriber(db.Model):
         if self.has_subscribed(company):
             self.subscribed_company.remove(company)
 
+    def has_subscribed(self, company):
+        return len(Company.query.filter(Company.subscriber.any(id=self.id)).all()) > 0
+
     def optout(self):
-        subbed_company = self.subscribed_company.all()
+        subbed_company = self.subscribed_company
         for sub in subbed_company:
             self.unsubscribes(sub)
-        db.session.delete(self)
+        self.deactivate()
 
-    def has_subscribed(self, company):
-        return self.subscribed_company.filter(subscribe.c.company_id == company.id).count() > 0
+    def activate(self):
+        data = {
+            'status': 0
+        }
+        self.update(data)
+        return True
 
-    # def subscribed_announcements(self):
-        # return Announcement.query.join(subscribe, (subscribe.c.company_id == Announcement.company_id)).filter(subscribe.c.telegram_id == self.id).order_by(Announcement.announced_date.desc()).all()
+    def deactivate(self):
+        data = {
+            'status': 1
+        }
+        self.update(data)
+        return True
+
+    def subscribed_announcements(self):
+        return Announcement.query.join(Subscribe, (Subscribe.company_id == Announcement.company_id)).filter(Subscribe.telegram_id == self.id).order_by(Announcement.announced_date.desc()).all()

@@ -4,7 +4,7 @@ import telegram
 from app import telebot_token, telegram_bot, db
 from app.models import Company
 from app.telebot import bp
-from app.telebot.helper import check_intent, send_telegram
+from app.telebot.helper import check_intent
 
 @bp.before_app_first_request
 def setupWebhook():
