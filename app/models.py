@@ -3,6 +3,7 @@ import requests
 import time
 import datetime
 from flask import current_app, render_template
+from sqlalchemy import and_
 from sqlalchemy.orm import backref
 from sqlalchemy.ext.associationproxy import association_proxy
 from bs4 import BeautifulSoup
@@ -61,14 +62,29 @@ class Subscribe(db.Model):
     company_id = db.Column(db.Integer, db.ForeignKey('company.id'), primary_key=True)
     subscribed_datetime = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     price_alert = db.Column(db.Float)
-    price_alert_status = db.Column(db.Integer, default=0)
-    last_sent = db.Column(db.DateTime)
+    price_alert_status = db.Column(db.Integer, default=0) # Status 0: Price alert not fulfilled, Status 1: Price alert fulfilled
+    last_sent = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     last_update = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     telegram_subscriber = db.relationship('TelegramSubscriber', backref=backref("subscribe", cascade="all, delete-orphan"))
     company = db.relationship('Company', backref=backref("subscribe", cascade="all, delete-orphan"), order_by="Company.stock_name", lazy="joined", innerjoin=True)
 
     def __repr__(self):
         return '<User {} subscribe {}>'.format(self.telegram_id, self.company_id)
+
+    def user_notified(self):
+        time_now = datetime.datetime.utcnow()
+        self.last_sent = time_now
+        self.last_updated = time_now
+
+    def set_price_alert(self, price):
+        time_now = datetime.datetime.utcnow()
+        self.price_alert = price
+        self.price_alert_status = 0
+        self.last_updated = time_now
+
+    def price_alert_notified(self):
+        self.price_alert_status = 1
+        self.user_notified(self)
 
 class Company(SearchableMixin, db.Model):
     __tablename__ = 'company'
@@ -81,18 +97,44 @@ class Company(SearchableMixin, db.Model):
     market = db.Column(db.String(32), nullable=False)
     sector = db.Column(db.String(64), nullable=False)
     last_done = db.Column(db.Float, nullable=True)
-    change_absolute = db.Column(db.Float, nullable=True)
-    change_percent = db.Column(db.Float, nullable=True)
+    change_absolute = db.Column(db.Float(precision=2), nullable=True)
+    change_percent = db.Column(db.Float(precision=2), nullable=True)
     opening = db.Column(db.Float, nullable=True)
     closing = db.Column(db.Float, nullable=True)
-    buy_vol = db.Column(db.Integer, nullable=True)
-    sell_vol = db.Column(db.Integer, nullable=True)
+    volume = db.Column(db.Integer, nullable=True)
     last_update = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     announcement = db.relationship('Announcement', backref='announced_company', lazy='dynamic', order_by='desc(Announcement.announced_date)')
     subscriber = association_proxy('subscribe', 'telegram_subscriber')
 
     def __repr__(self):
         return '<Company {}>'.format(self.stock_name)
+
+    def price_change(self, max_send_frequency=2):
+        # Storing current utc datetime
+        datetime_now = datetime.datetime.utcnow()
+        target_time = datetime_now - datetime.timedelta(hours=max_send_frequency)
+
+        if abs(self.change_percent) >= 3:
+            # Query list of subscribers that received price alerts more than max_send_frequency hours ago for self(company)
+            users = TelegramSubscriber.query.filter(TelegramSubscriber.subscribe.any(and_(Subscribe.last_sent<=target_time, Subscribe.company_id==self.id))).all()
+            for user in users:
+                response = render_template('telebot/price_alert.html', header='Volatile Alert', company=self, user=user, company_url=COMPANY_INFO_URL)
+                telegram_bot.send_message(chat_id=sub.chat_id, text=response, parse_mode='HTML')
+                sub = Subscribe.query.filter(Subscribe.telegram_id == user.id, Subscribe.company_id == self.id).first()
+                sub.user_notified()
+
+    def price_alert(self, max_send_frequency=2):
+        # Storing current utc datetime
+        datetime_now = datetime.datetime.utcnow()
+        target_time = datetime_now - datetime.timedelta(hours=max_send_frequency)
+
+        subscription = Subscribe.query.filter(Subscribe.company_id == self.id, Subscribe.last_sent<=target_time).all()
+        for sub in subscription:
+            if abs(self.last_done - sub.price_alert) < 0.05:
+                user = TelegramSubscriber.query.filter(id=sub.telegram_id).first()
+                response = render_template('telebot/price_alert.html', header='Price Alert', company=self, user=user, company_url=COMPANY_INFO_URL)
+                telegram_bot.send_message(chat_id=user.chat_id, test=response, parse_mode='HTML')
+                sub.price_alert_notified()
 
     @staticmethod
     def check_quote(string):
@@ -107,20 +149,21 @@ class Company(SearchableMixin, db.Model):
 
     @staticmethod
     def company_scrape():
+        companies = []
 
         # Storing current time for Malaysia's timezone
         tz = datetime.timezone(datetime.timedelta(hours=8))
         time_now = datetime.datetime.now(tz).time()
 
         # Morning refresh timing
-        time_start = datetime.time(8, 15)
-        time_end = datetime.time(8, 45)
+        time_start = datetime.time(8, 00)
+        time_end = datetime.time(8, 30)
 
         try:
             stock_source = requests.get(COMPANY_TRADE_URL)
         except:
             print("Stock source cannot be found.")
-            return True
+            return companies
         stock_soup = BeautifulSoup(stock_source.text, 'lxml')
 
         total_pages = int(stock_soup.find('li', {'id': "total_page"})['data-val'])
@@ -141,8 +184,7 @@ class Company(SearchableMixin, db.Model):
                 closing = Company.check_quote(stock_result.find_all('td')[5].text.strip())
                 change_absolute = last_done - closing if last_done != 0.0 else float(0)
                 change_percent = (change_absolute / closing)*100
-                buy_vol = int(Company.check_quote(stock_result.find_all('td')[9].text.strip().replace(',', ''))*100)
-                sell_vol = int(Company.check_quote(stock_result.find_all('td')[12].text.strip().replace(',', ''))*100)
+                volume = int(Company.check_quote(stock_result.find_all('td')[8].text.strip().replace(',', ''))*100)
 
                 # Initialising variables
                 company_site = None
@@ -177,8 +219,7 @@ class Company(SearchableMixin, db.Model):
                         'closing': closing,
                         'change_absolute': change_absolute,
                         'change_percent': change_percent,
-                        'buy_vol': buy_vol,
-                        'sell_vol': sell_vol,
+                        'volume': volume,
                         'last_update': datetime.datetime.utcnow()
                     }
                     if company_site:
@@ -204,12 +245,12 @@ class Company(SearchableMixin, db.Model):
                             closing = closing,
                             change_absolute = change_absolute,
                             change_percent = change_percent,
-                            buy_vol = buy_vol,
-                            sell_vol = sell_vol
+                            volume = volume
                             )
                     db.session.add(company)
+                    companies.append(company)
 
-        return True
+        return companies
 
 class Announcement(db.Model):
     __tablename__ = 'announcement'
@@ -336,8 +377,7 @@ class TelegramSubscriber(db.Model):
     username = db.Column(db.String, nullable=True)
     first_name = db.Column(db.String, nullable=True)
     last_name = db.Column(db.String, nullable=True)
-    # Status 0: Inactive, Status 1: Active, Status 2: Pending Feedback
-    status = db.Column(db.Integer, nullable=True, default=1)
+    status = db.Column(db.Integer, nullable=True, default=1) # Status 0: Inactive, Status 1: Active, Status 2: Pending Feedback
     subscribed_company = association_proxy('subscribe', 'company', creator=lambda company: Subscribe(company=company))
 
     def __repr__(self):
@@ -353,6 +393,17 @@ class TelegramSubscriber(db.Model):
 
     def has_subscribed(self, company):
         return len(Company.query.filter(Company.subscriber.any(id=self.id)).all()) > 0
+
+    def set_price_alert(self, company, price):
+        subscription = Subscribe.query.filter(Subscribe.telegram_id==self.id, Subscribe.company_id==company.id).first()
+        subscription.set_price_alert(price)
+
+    def daily_update(self):
+        subscription = Subscribe.query.filter(Subscribe.telegram_id==self.id).all()
+        for sub in subscription:
+            comp = Company.query.filter(Company.id==sub.company_id).first()
+            response = render_template('telebot/price_alert.html', header='Daily Update', company=comp, user=self, company_url=COMPANY_INFO_URL)
+            telegram_bot.send_message(chat_id=self.chat_id, test=response, parse_mode='HTML')
 
     def optout(self):
         subbed_company = self.subscribed_company
