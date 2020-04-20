@@ -392,7 +392,7 @@ class TelegramSubscriber(db.Model):
             self.subscribed_company.remove(company)
 
     def has_subscribed(self, company):
-        return len(Company.query.filter(Company.subscriber.any(id=self.id)).all()) > 0
+        return len(Subscribe.query.filter(Subscribe.company_id==comp.id, Subscribe.telegram_id==user.id).all()) > 0
 
     def set_price_alert(self, company, price):
         subscription = Subscribe.query.filter(Subscribe.telegram_id==self.id, Subscribe.company_id==company.id).first()
