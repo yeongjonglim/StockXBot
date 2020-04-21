@@ -22,4 +22,9 @@ def query_index(index, query, page, per_page):
         index=index,
         body={'query': {'multi_match': {'query': query, 'fields': ['*']}}, 'from': (page - 1) * per_page, 'size': per_page})
     ids = [int(hit['_id']) for hit in search['hits']['hits']]
-    return ids, search['hits']['total']['value']
+
+    # local dev and production is of different elasticsearch config
+    if current_app.debug or current_app.testing:
+        return ids, search['hits']['total']
+    else:
+        return ids, search['hits']['total']['value']

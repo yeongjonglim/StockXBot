@@ -7,7 +7,7 @@ from sqlalchemy import and_
 from sqlalchemy.orm import backref
 from sqlalchemy.ext.associationproxy import association_proxy
 from bs4 import BeautifulSoup
-from app import db
+from app import db, telegram_bot
 from app.search import add_to_index, remove_from_index, query_index
 
 COMPANY_INFO_URL = 'https://www.bursamalaysia.com/trade/trading_resources/listing_directory/company-profile?stock_code='
@@ -74,17 +74,16 @@ class Subscribe(db.Model):
     def user_notified(self):
         time_now = datetime.datetime.utcnow()
         self.last_sent = time_now
-        self.last_updated = time_now
 
     def set_price_alert(self, price):
         time_now = datetime.datetime.utcnow()
         self.price_alert = price
         self.price_alert_status = 0
-        self.last_updated = time_now
+        self.last_update = time_now
 
     def price_alert_notified(self):
         self.price_alert_status = 1
-        self.user_notified(self)
+        self.user_notified()
 
 class Company(SearchableMixin, db.Model):
     __tablename__ = 'company'
@@ -97,8 +96,8 @@ class Company(SearchableMixin, db.Model):
     market = db.Column(db.String(32), nullable=False)
     sector = db.Column(db.String(64), nullable=False)
     last_done = db.Column(db.Float, nullable=True)
-    change_absolute = db.Column(db.Float(precision=2), nullable=True)
-    change_percent = db.Column(db.Float(precision=2), nullable=True)
+    change_absolute = db.Column(db.Float(precision=7), nullable=True)
+    change_percent = db.Column(db.Float(precision=5), nullable=True)
     opening = db.Column(db.Float, nullable=True)
     closing = db.Column(db.Float, nullable=True)
     volume = db.Column(db.Integer, nullable=True)
@@ -119,7 +118,7 @@ class Company(SearchableMixin, db.Model):
             users = TelegramSubscriber.query.filter(TelegramSubscriber.subscribe.any(and_(Subscribe.last_sent<=target_time, Subscribe.company_id==self.id))).all()
             for user in users:
                 response = render_template('telebot/price_alert.html', header='Volatile Alert', company=self, user=user, company_url=COMPANY_INFO_URL)
-                telegram_bot.send_message(chat_id=sub.chat_id, text=response, parse_mode='HTML')
+                telegram_bot.send_message(chat_id=user.chat_id, text=response, parse_mode='HTML')
                 sub = Subscribe.query.filter(Subscribe.telegram_id == user.id, Subscribe.company_id == self.id).first()
                 sub.user_notified()
 
@@ -128,12 +127,12 @@ class Company(SearchableMixin, db.Model):
         datetime_now = datetime.datetime.utcnow()
         target_time = datetime_now - datetime.timedelta(hours=max_send_frequency)
 
-        subscription = Subscribe.query.filter(Subscribe.company_id == self.id, Subscribe.last_sent<=target_time).all()
+        subscription = Subscribe.query.filter(Subscribe.company_id == self.id, Subscribe.last_sent<=target_time, Subscribe.price_alert_status == 0, Subscribe.price_alert != None).all()
         for sub in subscription:
-            if abs(self.last_done - sub.price_alert) < 0.05:
-                user = TelegramSubscriber.query.filter(id=sub.telegram_id).first()
+            if abs(self.last_done - sub.price_alert) < 0.005:
+                user = TelegramSubscriber.query.filter(TelegramSubscriber.id==sub.telegram_id).first()
                 response = render_template('telebot/price_alert.html', header='Price Alert', company=self, user=user, company_url=COMPANY_INFO_URL)
-                telegram_bot.send_message(chat_id=user.chat_id, test=response, parse_mode='HTML')
+                telegram_bot.send_message(chat_id=user.chat_id, text=response, parse_mode='HTML')
                 sub.price_alert_notified()
 
     @staticmethod
@@ -168,6 +167,7 @@ class Company(SearchableMixin, db.Model):
 
         total_pages = int(stock_soup.find('li', {'id': "total_page"})['data-val'])
 
+        print("Scraping company information...")
         for page in range(1, total_pages+1):
             try:
                 stock_source = requests.get(COMPANY_TRADE_URL+str(page))
@@ -178,7 +178,6 @@ class Company(SearchableMixin, db.Model):
             stock_results = stock_soup.find('table').find('tbody', class_="font-xsmall").find_all('tr')
             for stock_result in stock_results:
                 stock_code = stock_result.find_all('td')[2].text.strip()
-                print("examining stock_code..."+stock_code)
                 stock_name = stock_result.find_all('td')[1].text.strip().split(' ')[0]
                 last_done = Company.check_quote(stock_result.find_all('td')[4].text.strip())
                 closing = Company.check_quote(stock_result.find_all('td')[5].text.strip())
@@ -392,7 +391,7 @@ class TelegramSubscriber(db.Model):
             self.subscribed_company.remove(company)
 
     def has_subscribed(self, company):
-        return len(Subscribe.query.filter(Subscribe.company_id==comp.id, Subscribe.telegram_id==user.id).all()) > 0
+        return len(Subscribe.query.filter(Subscribe.company_id==company.id, Subscribe.telegram_id==self.id).all()) > 0
 
     def set_price_alert(self, company, price):
         subscription = Subscribe.query.filter(Subscribe.telegram_id==self.id, Subscribe.company_id==company.id).first()
@@ -403,21 +402,19 @@ class TelegramSubscriber(db.Model):
         for sub in subscription:
             comp = Company.query.filter(Company.id==sub.company_id).first()
             response = render_template('telebot/price_alert.html', header='Daily Update', company=comp, user=self, company_url=COMPANY_INFO_URL)
-            telegram_bot.send_message(chat_id=self.chat_id, test=response, parse_mode='HTML')
+            telegram_bot.send_message(chat_id=self.chat_id, text=response, parse_mode='HTML')
+            sub.user_notified()
 
     def optout(self):
-        subbed_company = self.subscribed_company
-        for sub in subbed_company:
-            self.unsubscribes(sub)
+        for i in range(len(self.subscribed_company)):
+            self.unsubscribes(comps[0])
         self.status = 2
 
     def activate(self):
         self.status = 1
-        return True
 
     def deactivate(self):
         self.status = 0
-        return True
 
     def subscribed_announcements(self):
         return Announcement.query.join(Subscribe, (Subscribe.company_id == Announcement.company_id)).filter(Subscribe.telegram_id == self.id).order_by(Announcement.announced_date.desc()).all()

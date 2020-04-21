@@ -1,7 +1,7 @@
 import os
 from apscheduler.schedulers.blocking import BlockingScheduler
 from app import db, telegram_bot
-from app.models import Company, Announcement
+from app.models import Company, Announcement, Subscribe, TelegramSubscriber
 
 scheduler = BlockingScheduler()
 
@@ -41,7 +41,6 @@ def data_loading():
 
     db.session.commit()
 
-
 @scheduler.scheduled_job('cron', day_of_week='mon-sun', hour='3', minute='0', second='0', timezone='Asia/Kuala_Lumpur')
 def announcement_cleaning():
     initiate_app()
@@ -56,5 +55,6 @@ def daily_update():
         user.daily_update()
     db.session.commit()
 
-scheduler.start()
+if __name__ == "__main__":
+    scheduler.start()
 

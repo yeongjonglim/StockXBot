@@ -5,7 +5,7 @@ from app.main import bp
 def index():
     return render_template('index.html', title='Home')
 
-@bp.route('/ann?id=<ann_id>', methods=['GET'])
+@bp.route('/<ann_id>', methods=['GET'])
 def link_shortner(ann_id):
     target_url = 'https://disclosure.bursamalaysia.com/FileAccess/viewHtml?e='+ann_id
     return redirect(target_url)
