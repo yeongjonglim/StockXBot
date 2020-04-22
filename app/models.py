@@ -416,5 +416,10 @@ class TelegramSubscriber(db.Model):
     def deactivate(self):
         self.status = 0
 
+    def update_name(self, chat):
+        self.username = chat.username
+        self.first_name = chat.first_name
+        self.last_name = chat.last_name
+
     def subscribed_announcements(self):
         return Announcement.query.join(Subscribe, (Subscribe.company_id == Announcement.company_id)).filter(Subscribe.telegram_id == self.id).order_by(Announcement.announced_date.desc()).all()

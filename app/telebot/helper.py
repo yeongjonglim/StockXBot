@@ -88,6 +88,7 @@ def check_intent(chat, text, callback_query=False):
                 telegram.InlineKeyboardButton(text="Subscribe", callback_data="subscribeCompany")
                 ]
             if user:
+                user.update_name(chat)
                 markup.append(telegram.InlineKeyboardButton(text="Unsubscribe", callback_data="unsubscribeCompany"))
                 markup = [markup]
                 markup.append([
