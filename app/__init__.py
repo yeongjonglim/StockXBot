@@ -25,7 +25,17 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
     mail.init_app(app)
-    talisman.init_app(app)
+
+    csp = {
+        'default-src': [
+            '\'self\'',
+            '\'unsafe-inline\'',
+            'stackpath.bootstrapcdn.com',
+            'code.jquery.com',
+            'cdn.jsdelivr.net'
+        ]
+    }
+    talisman.init_app(app, content_security_policy=csp)
 
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) if app.config['ELASTICSEARCH_URL'] else None
 
