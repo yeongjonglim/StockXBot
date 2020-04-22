@@ -5,6 +5,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_mail import Mail
+from flask_talisman import Talisman
 from elasticsearch import Elasticsearch
 from config import Config
 import telegram
@@ -12,6 +13,7 @@ import telegram
 db = SQLAlchemy()
 migrate = Migrate()
 mail = Mail()
+talisman = Talisman()
 
 telebot_token = os.environ.get('TELEBOT_TOKEN')
 telegram_bot = telegram.Bot(telebot_token)
@@ -23,6 +25,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
     mail.init_app(app)
+    talisman.init_app(app)
 
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) if app.config['ELASTICSEARCH_URL'] else None
 
