@@ -10,7 +10,7 @@ def initiate_app():
     app = create_app()
     app.app_context().push()
 
-@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-19', minute='*', second='0', jitter=15, timezone='Asia/Kuala_Lumpur')
+@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='7-19', minute='*', second='0', jitter=15, timezone='Asia/Kuala_Lumpur')
 def data_loading():
     initiate_app()
 

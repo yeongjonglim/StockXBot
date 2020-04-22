@@ -155,8 +155,8 @@ class Company(SearchableMixin, db.Model):
         time_now = datetime.datetime.now(tz).time()
 
         # Morning refresh timing
-        time_start = datetime.time(8, 00)
-        time_end = datetime.time(8, 30)
+        time_start = datetime.time(7, 30)
+        time_end = datetime.time(8, 00)
 
         try:
             stock_source = requests.get(COMPANY_TRADE_URL)
