@@ -1,4 +1,5 @@
 import os
+import time
 from flask import url_for, request
 import telegram
 from app import telebot_token, telegram_bot, db
@@ -11,6 +12,7 @@ def setupWebhook():
     url = os.environ.get('HOST_URL')+url_for('{}.receivedMessage'.format(bp.name))
     print(url)
     webhook = telegram_bot.setWebhook('{url}'.format(url=url))
+    time.sleep(1)
     print('Webhook object: ' + str(webhook))
 
 @bp.route('/receivedMessage{}'.format(telebot_token),  methods=['POST'])
