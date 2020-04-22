@@ -199,7 +199,7 @@ class Company(SearchableMixin, db.Model):
                         company_source = requests.get(company_info)
                         company_soup = BeautifulSoup(company_source.text, 'lxml')
                     except:
-                        print("Company source cannot be found.")
+                        print("Company source cannot be found for " + stock_code)
                         continue
 
                     try:
