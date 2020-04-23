@@ -1,18 +1,15 @@
 import os
+from flask import current_app
 from apscheduler.schedulers.blocking import BlockingScheduler
-from app import db, telegram_bot
+from app import create_app, db, telegram_bot
 from app.models import Company, Announcement, Subscribe, TelegramSubscriber
 
+app = create_app()
 scheduler = BlockingScheduler()
-
-def initiate_app():
-    from app import create_app
-    app = create_app()
-    app.app_context().push()
 
 @scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='7-19', minute='*', second='0', jitter=15, timezone='Asia/Kuala_Lumpur')
 def data_loading():
-    initiate_app()
+    app.app_context().push()
 
     # Load company (qoute) details and announcement details
     Company.company_scrape()
@@ -43,13 +40,13 @@ def data_loading():
 
 @scheduler.scheduled_job('cron', day_of_week='mon-sun', hour='3', minute='0', second='0', timezone='Asia/Kuala_Lumpur')
 def announcement_cleaning():
-    initiate_app()
+    app.app_context().push()
     Announcement.announcement_cleaning()
     db.session.commit()
 
 @scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='18', minute='30', timezone='Asia/Kuala_Lumpur')
 def daily_update():
-    initiate_app()
+    app.app_context().push()
     users = TelegramSubscriber.query.filter_by(status=1).all()
     for user in users:
         user.daily_update()
@@ -57,4 +54,3 @@ def daily_update():
 
 if __name__ == "__main__":
     scheduler.start()
-
