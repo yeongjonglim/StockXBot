@@ -406,6 +406,7 @@ class TelegramSubscriber(db.Model):
             sub.user_notified()
 
     def optout(self):
+        comps = self.subscribed_company
         for i in range(len(self.subscribed_company)):
             self.unsubscribes(comps[0])
         self.status = 2
