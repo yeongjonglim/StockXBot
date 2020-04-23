@@ -48,7 +48,6 @@ def check_intent(chat, text, callback_query=False):
         price = None
     else:
         # Do if it is not callback query (generic text query)
-        print('Getting response from DialogFlow')
         response = detect_intent_text(os.environ.get('PROJECT_ID'), chat_id, text, 'en')
         intent = response.query_result.intent.display_name
         companies = response.query_result.parameters.fields.get('company').list_value.values if response.query_result.parameters.fields.get('company') else None
@@ -324,9 +323,8 @@ def detect_intent_text(project_id, session_id, text, language_code):
     session_client = dialogflow.SessionsClient()
 
     session = session_client.session_path(project_id, session_id)
-    print('Session path: {}\n'.format(session))
+    # print('Session path: {}\n'.format(session))
 
-    # for text in texts:
     text_input = dialogflow.types.TextInput(text=text, language_code=language_code)
 
     query_input = dialogflow.types.QueryInput(text=text_input)
