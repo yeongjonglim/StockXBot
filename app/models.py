@@ -182,7 +182,7 @@ class Company(SearchableMixin, db.Model):
                 last_done = Company.check_quote(stock_result.find_all('td')[4].text.strip())
                 closing = Company.check_quote(stock_result.find_all('td')[5].text.strip())
                 change_absolute = last_done - closing if last_done != 0.0 else float(0)
-                change_percent = (change_absolute / closing)*100
+                change_percent = (change_absolute / closing)*100 if closing != 0 else float(0)
                 volume = int(Company.check_quote(stock_result.find_all('td')[8].text.strip().replace(',', ''))*100)
 
                 # Initialising variables
