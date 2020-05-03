@@ -7,11 +7,12 @@ from app.models import Company, Announcement, Subscribe, TelegramSubscriber
 app = create_app()
 scheduler = BlockingScheduler()
 
-@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='7-19', minute='*', second='0', jitter=15, timezone='Asia/Kuala_Lumpur')
+@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='7-19', minute='*', second='15', jitter=15, timezone='Asia/Kuala_Lumpur')
 def data_loading():
     app.app_context().push()
 
     # Load company (qoute) details and announcement details
+    print("Starting data loading job...")
     Company.company_scrape()
     announcements = Announcement.announcement_scrape()
     db.session.commit()
@@ -27,7 +28,6 @@ def data_loading():
         response = announcement.announcement_message()
         if response:
             for chat in chats:
-                print("Sending to ..." + str(chat))
                 telegram_bot.send_message(chat_id=chat, text=response, parse_mode='HTML')
 
     # Query all companies and run price check and price alert for each
@@ -40,12 +40,14 @@ def data_loading():
 
 @scheduler.scheduled_job('cron', day_of_week='mon-sun', hour='3', minute='0', second='0', timezone='Asia/Kuala_Lumpur')
 def announcement_cleaning():
+    print("Starting announcement cleaning job...")
     app.app_context().push()
     Announcement.announcement_cleaning()
     db.session.commit()
 
 @scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='18', minute='30', timezone='Asia/Kuala_Lumpur')
 def daily_update():
+    print("Starting daily update job...")
     app.app_context().push()
     users = TelegramSubscriber.query.filter_by(status=1).all()
     for user in users:

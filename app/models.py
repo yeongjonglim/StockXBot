@@ -155,8 +155,8 @@ class Company(SearchableMixin, db.Model):
         time_now = datetime.datetime.now(tz).time()
 
         # Morning refresh timing
-        time_start = datetime.time(7, 30)
-        time_end = datetime.time(8, 00)
+        time_start = datetime.time(7, 00)
+        time_end = datetime.time(7, 30)
 
         try:
             stock_source = requests.get(COMPANY_TRADE_URL)
@@ -167,7 +167,6 @@ class Company(SearchableMixin, db.Model):
 
         total_pages = int(stock_soup.find('li', {'id': "total_page"})['data-val'])
 
-        print("Scraping company information...")
         for page in range(1, total_pages+1):
             try:
                 stock_source = requests.get(COMPANY_TRADE_URL+str(page))
