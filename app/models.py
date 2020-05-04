@@ -203,10 +203,10 @@ class Company(SearchableMixin, db.Model):
 
                     try:
                         company_site = company_soup.find('a', {'target': '_blank'}, class_='btn btn-block btn-effect btn-white').get('href')
+                        company_name = company_soup.find('h5', class_='bold text-muted my-2 clear-line-height').text
                     except:
                         company_site = ""
                     finally:
-                        company_name = company_soup.find('h5', class_='bold text-muted my-2 clear-line-height').text
                         market = company_soup.find('label', text='Market:').next_sibling.strip()
                         sector = company_soup.find('label', text='Sector:').next_sibling.strip()
                         opening = Company.check_quote(company_soup.find('th', text='Open').find_next('td').text.strip())
