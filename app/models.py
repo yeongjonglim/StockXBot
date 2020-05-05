@@ -198,15 +198,20 @@ class Company(SearchableMixin, db.Model):
                         company_source = requests.get(company_info)
                         company_soup = BeautifulSoup(company_source.text, 'lxml')
                     except:
+                        company_soup = None
                         print("Company source cannot be found for " + stock_code)
-                        continue
 
-                    try:
-                        company_site = company_soup.find('a', {'target': '_blank'}, class_='btn btn-block btn-effect btn-white').get('href')
-                        company_name = company_soup.find('h5', class_='bold text-muted my-2 clear-line-height').text
-                    except:
-                        company_site = ""
-                    finally:
+                    if not Company.query.filter_by(stock_code=stock_code).first() and company_soup:
+                        try:
+                            company_site = company_soup.find('a', {'target': '_blank'}, class_='btn btn-block btn-effect btn-white').get('href')
+                        except:
+                            company_site = ""
+
+                        try:
+                            company_name = company_soup.find('h5', class_='bold text-muted my-2 clear-line-height').text
+                        except:
+                            company_name = stock_name
+
                         market = company_soup.find('label', text='Market:').next_sibling.strip()
                         sector = company_soup.find('label', text='Sector:').next_sibling.strip()
                         opening = Company.check_quote(company_soup.find('th', text='Open').find_next('td').text.strip())
@@ -220,12 +225,6 @@ class Company(SearchableMixin, db.Model):
                         'volume': volume,
                         'last_update': datetime.datetime.utcnow()
                     }
-                    if company_site:
-                        data['company_site'] = company_site
-                    if market:
-                        data['market'] = market
-                    if sector:
-                        data['sector'] = sector
                     if opening:
                         data['opening'] = opening
 
