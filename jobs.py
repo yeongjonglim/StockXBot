@@ -7,7 +7,7 @@ from app.models import Company, Announcement, Subscribe, TelegramSubscriber
 app = create_app()
 scheduler = BlockingScheduler()
 
-@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='7-19', minute='*', second='15', jitter=15, timezone='Asia/Kuala_Lumpur')
+@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='7-19', minute='*/4', second='15', jitter=15, timezone='Asia/Kuala_Lumpur')
 def data_loading():
     app.app_context().push()
 
@@ -37,6 +37,7 @@ def data_loading():
         sub.company.price_alert()
 
     db.session.commit()
+    print("Data loading job completed...")
 
 @scheduler.scheduled_job('cron', day_of_week='mon-sun', hour='3', minute='0', second='0', timezone='Asia/Kuala_Lumpur')
 def announcement_cleaning():
@@ -44,6 +45,7 @@ def announcement_cleaning():
     app.app_context().push()
     Announcement.announcement_cleaning()
     db.session.commit()
+    print("Announcement cleaning job completed...")
 
 @scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='18', minute='30', timezone='Asia/Kuala_Lumpur')
 def daily_update():
@@ -53,6 +55,7 @@ def daily_update():
     for user in users:
         user.daily_update()
     db.session.commit()
+    print("Daily update job completed...")
 
 if __name__ == "__main__":
     scheduler.start()
