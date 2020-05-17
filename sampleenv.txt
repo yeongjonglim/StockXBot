@@ -1,0 +1,30 @@
+FLASK_APP=stockxbot.py
+FLASK_ENV=development
+
+DATABASE_URL=postgresql://username:password@localhost:PORT/stockxbot
+
+TELEBOT_TOKEN=10293810:AAAAAAAAAAAAAAAAAAAAAA
+HOST_URL=https://abcdefgh.ngrok.io
+TARGET_CHANNEL=@channel_name
+
+GOOGLE_APPLICATION_CREDENTIALS=./filename.json
+# This part is provided by Google Service Account
+TYPE=account_type
+PROJECT_ID=project-id
+PRIVATE_KEY_ID=private_key_id
+PRIVATE_KEY='-----BEGIN PRIVATE KEY-----YOUR_PRIVATE_KEY==-----END PRIVATE KEY-----\n'
+CLIENT_EMAIL=hello@blabla.com
+CLIENT_ID=client_id
+AUTH_URI=auth_uri
+TOKEN_URI=token_uri
+AUTH_PROVIDER_X509_CERT_URL=auth_provider
+CLIENT_X509_CERT_URL=client_cert_url
+
+ELASTICSEARCH_URL=http://localhost:9200
+
+# This part is optional to get notification when app failed
+MAIL_SERVER=mail_server
+MAIL_PORT=mail_port
+MAIL_USE_TLS=1
+MAIL_USERNAME=your_email@username.com
+MAIL_PASSWORD=your_email_password
