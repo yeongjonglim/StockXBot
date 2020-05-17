@@ -4,7 +4,7 @@ This is a bot to notify users on latest stock announcements.
 
 ## Deployment
 
-Deployed on [Heroku](https://heroku.com)
+Deployed on [Heroku](https://heroku.com).
 
 ## Built With
 
