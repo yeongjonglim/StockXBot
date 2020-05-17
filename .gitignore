@@ -70,6 +70,7 @@ instance/
 app.db
 app.db-journal
 *.csv
+*.json
 
 # Scrapy stuff:
 .scrapy
