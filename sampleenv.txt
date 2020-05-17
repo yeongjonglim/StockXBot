@@ -1,6 +1,7 @@
 FLASK_APP=stockxbot.py
 FLASK_ENV=development
 
+SECRET_KEY='random-string'
 DATABASE_URL=postgresql://username:password@localhost:PORT/stockxbot
 
 TELEBOT_TOKEN=10293810:AAAAAAAAAAAAAAAAAAAAAA
@@ -28,3 +29,4 @@ MAIL_PORT=mail_port
 MAIL_USE_TLS=1
 MAIL_USERNAME=your_email@username.com
 MAIL_PASSWORD=your_email_password
+ADMIN_EMAIL=your_admin_email@username.com
