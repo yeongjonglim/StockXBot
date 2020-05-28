@@ -1,9 +1,10 @@
 [{{ header }}]
-<a href="{{ company_url }}{{ company.stock_code }}">{{ company.company_name }}</a> ({% if company.change_percent > 0 %}+{% endif %}{{ '%0.2f'|format(company.change_percent) }}%)
+<a href="{{ company_url }}{{ company.stock_code }}">{{ company.company_name }}</a> ({{ '{:+0.2f}'.format(company.change_percent) }}%)
 <pre>
 Last Done   : {{ company.last_done }}
-Open        : {{ company.opening }}
 Volume('00'): {{ '{:,.0f}'.format(company.volume/100) }}
-Change      : {{ '%0.3f'|format(company.change_absolute) }}
+Change      : {{ '{:0.3f}'.format(company.change_absolute) }}
+High        : {{ company.day_high }}
+Low         : {{ company.day_low }}
 Prev Close  : {{ company.closing }}
 </pre>

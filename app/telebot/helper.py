@@ -253,7 +253,7 @@ def check_intent(chat, text, callback_query=False):
                     ]
             else:
                 # retrieve all companies that the user has subscribed to
-                response_text = Company.company_message(user.subscribed_company, message="Thank you for subscribing, this is your subscription list:")
+                response_text = user.company_message(message="Thank you for subscribing, this is your subscription list:")
                 markup = [[
                     telegram.InlineKeyboardButton(text="Subscribe", callback_data="subscribeCompany"),
                     telegram.InlineKeyboardButton(text="Unsubscribe", callback_data="unsubscribeCompany")

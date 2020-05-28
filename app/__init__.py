@@ -48,7 +48,6 @@ def create_app(config_class=Config):
     from app.telebot import bp as telebot_bp
     app.register_blueprint(telebot_bp)
 
-    # If in production mode, error will be sent to mail (mystockxbot@gmail.com) for now
     if not app.debug and not app.testing:
         if app.config['MAIL_SERVER']:
             auth = None

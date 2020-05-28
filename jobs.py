@@ -7,7 +7,7 @@ from app.models import Company, Announcement, Subscribe, TelegramSubscriber
 app = create_app()
 scheduler = BlockingScheduler()
 
-@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='7-19', minute='*/4', second='15', jitter=15, timezone='Asia/Kuala_Lumpur')
+@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-19', minute='*/10', second='15', jitter=15, timezone='Asia/Kuala_Lumpur')
 def data_loading():
     app.app_context().push()
 
@@ -40,12 +40,13 @@ def data_loading():
     print("Data loading job completed...")
 
 @scheduler.scheduled_job('cron', day_of_week='mon-sun', hour='3', minute='0', second='0', timezone='Asia/Kuala_Lumpur')
-def announcement_cleaning():
-    print("Starting announcement cleaning job...")
+def cleaning():
+    print("Starting cleaning job...")
     app.app_context().push()
+    Company.company_cleaning()
     Announcement.announcement_cleaning()
     db.session.commit()
-    print("Announcement cleaning job completed...")
+    print("Cleaning job completed...")
 
 @scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='18', minute='30', timezone='Asia/Kuala_Lumpur')
 def daily_update():

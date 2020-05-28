@@ -1,6 +1,7 @@
 import os
 import requests
 import time
+import random
 import datetime
 from flask import current_app, render_template
 from sqlalchemy import and_
@@ -85,6 +86,12 @@ class Subscribe(db.Model):
         self.price_alert_status = 1
         self.user_notified()
 
+    @staticmethod
+    def subscribe_cleaning(comp_id):
+        subs = Subscribe.query.filter_by(company_id=comp_id).all()
+        for sub in subs:
+            db.session.delete(sub)
+
 class Company(SearchableMixin, db.Model):
     __tablename__ = 'company'
     __searchable__ = ['stock_code', 'stock_name', 'company_name']
@@ -101,6 +108,8 @@ class Company(SearchableMixin, db.Model):
     opening = db.Column(db.Float, nullable=True)
     closing = db.Column(db.Float, nullable=True)
     volume = db.Column(db.Integer, nullable=True)
+    day_high = db.Column(db.Float, nullable=True)
+    day_low = db.Column(db.Float, nullable=True)
     last_update = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
     announcement = db.relationship('Announcement', backref='announced_company', lazy='dynamic', order_by='desc(Announcement.announced_date)')
     subscriber = association_proxy('subscribe', 'telegram_subscriber')
@@ -108,7 +117,7 @@ class Company(SearchableMixin, db.Model):
     def __repr__(self):
         return '<Company {}>'.format(self.stock_name)
 
-    def price_change(self, max_send_frequency=2):
+    def price_change(self, max_send_frequency=3):
         # Storing current utc datetime
         datetime_now = datetime.datetime.utcnow()
         target_time = datetime_now - datetime.timedelta(hours=max_send_frequency)
@@ -122,7 +131,7 @@ class Company(SearchableMixin, db.Model):
                 sub = Subscribe.query.filter(Subscribe.telegram_id == user.id, Subscribe.company_id == self.id).first()
                 sub.user_notified()
 
-    def price_alert(self, max_send_frequency=2):
+    def price_alert(self, max_send_frequency=3):
         # Storing current utc datetime
         datetime_now = datetime.datetime.utcnow()
         target_time = datetime_now - datetime.timedelta(hours=max_send_frequency)
@@ -143,8 +152,12 @@ class Company(SearchableMixin, db.Model):
             return float(string)
 
     @staticmethod
-    def company_message(companies, message=None):
-        return render_template('telebot/company_template.html', message=message, companies=companies, company_url=COMPANY_INFO_URL)
+    def company_cleaning(inactive_days=7):
+        delete_date = datetime.datetime.now() - datetime.timedelta(days=inactive_days)
+        comps = Company.query.filter(Company.last_update<=delete_date).all()
+        for comp in comps:
+            Subscribe.subscribe_cleaning(comp.id)
+            db.session.delete(comp)
 
     @staticmethod
     def company_scrape():
@@ -182,6 +195,8 @@ class Company(SearchableMixin, db.Model):
                 closing = Company.check_quote(stock_result.find_all('td')[5].text.strip())
                 change_absolute = last_done - closing if last_done != 0.0 else float(0)
                 change_percent = (change_absolute / closing)*100 if closing != 0 else float(0)
+                day_high = Company.check_quote(stock_result.find_all('td')[13].text.strip())
+                day_low = Company.check_quote(stock_result.find_all('td')[14].text.strip())
                 volume = int(Company.check_quote(stock_result.find_all('td')[8].text.strip().replace(',', ''))*100)
 
                 # Initialising variables
@@ -191,7 +206,7 @@ class Company(SearchableMixin, db.Model):
                 sector = None
                 opening = None
 
-                if not Company.query.filter_by(stock_code=stock_code).first() or (time_now >= time_start and time_now < time_end):
+                if not Company.query.filter_by(stock_code=stock_code).first() or ((time_now >= time_start and time_now < time_end) and False):
                     # Request the site's HTML in text format then render in lxml markup
                     company_info = COMPANY_INFO_URL + stock_code
                     try:
@@ -214,7 +229,7 @@ class Company(SearchableMixin, db.Model):
 
                         market = company_soup.find('label', text='Market:').next_sibling.strip()
                         sector = company_soup.find('label', text='Sector:').next_sibling.strip()
-                        opening = Company.check_quote(company_soup.find('th', text='Open').find_next('td').text.strip())
+                        # opening = Company.check_quote(company_soup.find('th', text='Open').find_next('td').text.strip())
 
                 if Company.query.filter_by(stock_code=stock_code).first():
                     data = {
@@ -223,10 +238,12 @@ class Company(SearchableMixin, db.Model):
                         'change_absolute': change_absolute,
                         'change_percent': change_percent,
                         'volume': volume,
+                        'day_high': day_high,
+                        'day_low': day_low,
                         'last_update': datetime.datetime.utcnow()
                     }
-                    if opening:
-                        data['opening'] = opening
+                    # if opening:
+                    #     data['opening'] = opening
 
                     Company.query.filter_by(stock_code=stock_code).update(data)
                 else:
@@ -238,14 +255,19 @@ class Company(SearchableMixin, db.Model):
                             market = market,
                             sector = sector,
                             last_done = last_done,
-                            opening = opening,
+                            # opening = opening,
                             closing = closing,
                             change_absolute = change_absolute,
                             change_percent = change_percent,
-                            volume = volume
+                            volume = volume,
+                            day_high = day_high,
+                            day_low = day_low
                             )
                     db.session.add(company)
                     companies.append(company)
+
+            # print('{:.2f}%'.format((page-1)/total_pages * 100))
+            time.sleep(random.randint(1,3))
 
         return companies
 
@@ -390,6 +412,9 @@ class TelegramSubscriber(db.Model):
 
     def has_subscribed(self, company):
         return len(Subscribe.query.filter(Subscribe.company_id==company.id, Subscribe.telegram_id==self.id).all()) > 0
+
+    def company_message(self, message=None):
+        return render_template('telebot/company_template.html', message=message, companies=self.subscribed_company, company_url=COMPANY_INFO_URL)
 
     def set_price_alert(self, company, price):
         subscription = Subscribe.query.filter(Subscribe.telegram_id==self.id, Subscribe.company_id==company.id).first()
