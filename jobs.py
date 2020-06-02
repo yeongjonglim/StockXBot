@@ -39,7 +39,7 @@ def data_loading():
     db.session.commit()
     print("Data loading job completed...")
 
-@scheduler.scheduled_job('cron', day_of_week='mon-sun', hour='3', minute='0', second='0', timezone='Asia/Kuala_Lumpur')
+@scheduler.scheduled_job('cron', day_of_week='mon-sun', hour='22', minute='0', second='0', timezone='Asia/Kuala_Lumpur')
 def cleaning():
     print("Starting cleaning job...")
     app.app_context().push()
