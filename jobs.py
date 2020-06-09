@@ -17,6 +17,10 @@ def data_loading():
     announcements = Announcement.announcement_scrape()
     db.session.commit()
 
+    if not Announcement.query.filter_by(announced_date=datetime.date.today()).first():
+        print("No operation today, no announcement/stock update required")
+        return
+
     # Send out announcements based on announcements loading
     for announcement in announcements:
         recipients = announcement.subscriber()
@@ -50,6 +54,10 @@ def cleaning():
 
 @scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='18', minute='30', timezone='Asia/Kuala_Lumpur')
 def daily_update():
+    if not Announcement.query.filter_by(announced_date=datetime.date.today()).first():
+        print("No operation today, no daily update required...")
+        return
+
     print("Starting daily update job...")
     app.app_context().push()
     users = TelegramSubscriber.query.filter_by(status=1).all()
