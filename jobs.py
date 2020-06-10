@@ -55,12 +55,12 @@ def cleaning():
 
 @scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='18', minute='30', timezone='Asia/Kuala_Lumpur')
 def daily_update():
+    app.app_context().push()
     if not Announcement.query.filter_by(announced_date=datetime.date.today()).first():
         print("No operation today, no daily update required...")
         return
 
     print("Starting daily update job...")
-    app.app_context().push()
     users = TelegramSubscriber.query.filter_by(status=1).all()
     for user in users:
         user.daily_update()
