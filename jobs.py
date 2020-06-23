@@ -6,16 +6,16 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from app import create_app, db, telegram_bot
 from app.models import Company, Announcement, Subscribe, TelegramSubscriber
 
-app = create_app()
+from stockxbot import app
 scheduler = BlockingScheduler()
 
 @scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-19', minute='*/10', second='15', jitter=15, timezone='Asia/Kuala_Lumpur')
 def data_loading():
-    app.app_context().push()
+    #app.app_context().push()
 
     # Load company (quote) details and announcement details
     print("Starting data loading job...")
-    #Company.company_scrape()
+    Company.company_scrape()
     announcements = Announcement.announcement_scrape()
     db.session.commit()
 
@@ -40,6 +40,7 @@ def data_loading():
     # Query all companies and run price check and price alert for each
     subs = Subscribe.query.all()
     for sub in subs:
+        time.sleep(0.1)
         sub.company.price_change()
         sub.company.price_alert()
 
