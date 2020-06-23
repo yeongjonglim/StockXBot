@@ -9,7 +9,7 @@ from app.models import Company, Announcement, Subscribe, TelegramSubscriber
 from stockxbot import app
 scheduler = BlockingScheduler()
 
-@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-19', minute='*/3', second='15', jitter=15, timezone='Asia/Kuala_Lumpur')
+@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-19', minute='*/5', second='15', jitter=15, timezone='Asia/Kuala_Lumpur')
 def data_loading():
     app.app_context().push()
     # Load company (quote) details and announcement details
