@@ -1,5 +1,6 @@
 import os
 import datetime
+import time
 from flask import current_app
 from apscheduler.schedulers.blocking import BlockingScheduler
 from app import create_app, db, telegram_bot
@@ -12,9 +13,9 @@ scheduler = BlockingScheduler()
 def data_loading():
     app.app_context().push()
 
-    # Load company (qoute) details and announcement details
+    # Load company (quote) details and announcement details
     print("Starting data loading job...")
-    Company.company_scrape()
+    #Company.company_scrape()
     announcements = Announcement.announcement_scrape()
     db.session.commit()
 
@@ -33,6 +34,7 @@ def data_loading():
         response = announcement.announcement_message()
         if response:
             for chat in chats:
+                time.sleep(0.1)
                 telegram_bot.send_message(chat_id=chat, text=response, parse_mode='HTML')
 
     # Query all companies and run price check and price alert for each

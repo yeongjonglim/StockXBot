@@ -352,7 +352,7 @@ class Announcement(db.Model):
                     ann_id = announce_row[3].find('a').get('href').split('=')[1]
                     if Announcement.query.filter_by(ann_id=ann_id).first():
                         continue
-                    announcement_date = announce_row[1].text.strip()
+                    announcement_date = announce_row[1].find("div", class_="d-lg-inline-block d-none").text.strip()
                     announcement_details = announce_row[3].find('a').text.strip()
                     if announce_row[3].find('span'):
                         announcement_details += ' ' + announce_row[3].find('span').text.strip()
