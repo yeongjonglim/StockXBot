@@ -9,10 +9,9 @@ from app.models import Company, Announcement, Subscribe, TelegramSubscriber
 from stockxbot import app
 scheduler = BlockingScheduler()
 
-@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-19', minute='*/10', second='15', jitter=15, timezone='Asia/Kuala_Lumpur')
+@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour='8-19', minute='*/3', second='15', jitter=15, timezone='Asia/Kuala_Lumpur')
 def data_loading():
-    #app.app_context().push()
-
+    app.app_context().push()
     # Load company (quote) details and announcement details
     print("Starting data loading job...")
     Company.company_scrape()
@@ -49,8 +48,8 @@ def data_loading():
 
 @scheduler.scheduled_job('cron', day_of_week='mon-sun', hour='22', minute='0', second='0', timezone='Asia/Kuala_Lumpur')
 def cleaning():
-    print("Starting cleaning job...")
     app.app_context().push()
+    print("Starting cleaning job...")
     Company.company_cleaning()
     Announcement.announcement_cleaning()
     db.session.commit()
