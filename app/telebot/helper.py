@@ -6,6 +6,8 @@ from app import telegram_bot, db
 from app.models import Company, TelegramSubscriber, Announcement
 from app.email import send_email
 
+COMPANY_INFO_URL = 'https://www.bursamalaysia.com/trade/trading_resources/listing_directory/company-profile?stock_code='
+
 def pagination_button(total, page, per_page, target_intent, company=None):
     has_next = (total - (page*per_page)) > 0
     has_prev = page > 1
@@ -84,19 +86,50 @@ def check_intent(chat, text, callback_query=False):
         elif intent == "getAgentInformation":
             response_text = render_template('telebot/agent_info_template.html', user_name=chat.first_name)
             markup = [
-                telegram.InlineKeyboardButton(text="Subscribe", callback_data="subscribeCompany")
+                telegram.InlineKeyboardButton(text="Subscribe", callback_data="subscribeCompany"),
+                telegram.InlineKeyboardButton(text="Query", callback_data="queryCompany")
                 ]
             if user:
                 user.update_name(chat)
-                markup.append(telegram.InlineKeyboardButton(text="Unsubscribe", callback_data="unsubscribeCompany"))
                 markup = [markup]
                 markup.append([
                     telegram.InlineKeyboardButton(text="Check Subscription", callback_data="getSubscribedCompany"),
                     telegram.InlineKeyboardButton(text="Set Price Alert", callback_data="setPriceAlert")
-                    ])
-                markup.append([telegram.InlineKeyboardButton(text="⏹️ Opt Out", callback_data="optOut")])
+                ])
+                markup.append([
+                    telegram.InlineKeyboardButton(text="Unsubscribe", callback_data="unsubscribeCompany"),
+                    telegram.InlineKeyboardButton(text="⏹️ Opt Out", callback_data="optOut")
+                ])
             else:
                 markup = [markup]
+
+        elif intent == "queryCompany":
+            if not company:
+                # no company is typed
+                detect_intent_text(os.environ.get('PROJECT_ID'), chat_id, intent, 'en')
+                response_text = 'Please input the stock name that you are interested in.'
+            elif not comp and current_app.elasticsearch:
+                # no specific company is found in db
+                response_text = 'This is the list of stocks that are nearest to your input.'
+                query, total = Company.search(company, page, per_page)
+                target_companies = query.all()
+                buttons = []
+                for target_company in target_companies:
+                    button = telegram.InlineKeyboardButton(text="{stock_name}: {company_name} ({stock_code})".format(stock_name=target_company.stock_name, company_name=target_company.company_name, stock_code=target_company.stock_code), callback_data="queryCompany@{}".format(target_company.stock_code))
+                    buttons.append(button)
+                buttons = [buttons]
+                markup = list(map(list, zip(*buttons)))
+                # create pagination experience here
+                page_buttons = pagination_button(total, page, per_page, intent, company=company)
+                markup.append(page_buttons)
+                markup.append([telegram.InlineKeyboardButton(text="ℹ️ Back to Help", callback_data="getAgentInformation")])
+            elif not comp:
+                # company input cannot be recognised without elasticsearch assistance
+                detect_intent_text(os.environ.get('PROJECT_ID'), chat_id, intent, 'en')
+                response_text = "Sorry, I can't find the company you are interested in, can you please specify the company with full name?"
+            else:
+                response_text = render_template('telebot/price_alert.html', company=comp, company_url=COMPANY_INFO_URL, header="Query Result")
+                # response_text = "{} last checked {}".format(comp.stock_name, comp.)
 
         elif intent == "subscribeCompany":
             if not company:
