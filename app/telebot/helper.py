@@ -331,7 +331,7 @@ def check_intent(chat, text, callback_query=False):
                     user_name = None
                 send_email('Feedback from Telegram User',
                            sender='no-reply@'+current_app.config['MAIL_SERVER'],
-                           recipients=current_app.config['ADMINS']
+                           recipients=current_app.config['ADMINS'],
                            text_body=render_template('email/feedback.txt', user=user_name, feedback_text=text),
                            html_body=render_template('email/feedback.html', user=user_name, feedback_text=text)
                            )
