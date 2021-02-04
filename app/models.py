@@ -162,6 +162,7 @@ class Company(SearchableMixin, db.Model):
     @staticmethod
     def company_scrape():
         companies = []
+        s = Company.get_request_session()
 
         # Storing current time for Malaysia's timezone
         tz = datetime.timezone(datetime.timedelta(hours=8))
@@ -172,7 +173,7 @@ class Company(SearchableMixin, db.Model):
         time_end = datetime.time(7, 30)
 
         try:
-            stock_source = requests.get(COMPANY_TRADE_URL)
+            stock_source = s.get(COMPANY_TRADE_URL)
         except:
             print("Stock source cannot be found.")
             return companies
@@ -182,7 +183,7 @@ class Company(SearchableMixin, db.Model):
 
         for page in range(1, total_pages+1):
             try:
-                stock_source = requests.get(COMPANY_TRADE_URL+str(page))
+                stock_source = s.get(COMPANY_TRADE_URL+str(page))
             except:
                 print("page missing..." + str(page))
                 continue
@@ -210,7 +211,7 @@ class Company(SearchableMixin, db.Model):
                     # Request the site's HTML in text format then render in lxml markup
                     company_info = COMPANY_INFO_URL + stock_code
                     try:
-                        company_source = requests.get(company_info)
+                        company_source = s.get(company_info)
                         company_soup = BeautifulSoup(company_source.text, 'lxml')
                     except:
                         company_soup = None
@@ -271,6 +272,14 @@ class Company(SearchableMixin, db.Model):
 
         return companies
 
+    @staticmethod
+    def get_request_session():
+        s = requests.Session()
+        s.headers = {
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36'
+        }
+        return s
+
 class Announcement(db.Model):
     __tablename__ = 'announcement'
     id = db.Column(db.Integer, primary_key=True)
@@ -319,6 +328,7 @@ class Announcement(db.Model):
     def announcement_scrape(extract_latest=True):
         announcements = []
         stocks = []
+        s = Announcement.get_request_session()
 
         if len(Company.query.all()) == 0:
             Company.company_scrape()
@@ -336,7 +346,7 @@ class Announcement(db.Model):
 
             # Request the site's HTML in text format then render in lxml markup
             try:
-                search_source = requests.get(announcement_search)
+                search_source = s.get(announcement_search)
                 search_soup = BeautifulSoup(search_source.text, 'lxml')
             except:
                 return "Search source cannot be found."
@@ -359,7 +369,7 @@ class Announcement(db.Model):
                     if announce_row[3].find('p'):
                         announcement_details += " - " + announce_row[3].find('p').text.strip().replace('\t',' ').replace('\n',' ').replace('\r','')
                     announcement_info = ANNOUNCEMENT_INFO_URL + ann_id
-                    info_source = requests.get(announcement_info)
+                    info_source = s.get(announcement_info)
                     info_soup = BeautifulSoup(info_source.text, 'lxml')
                     announcement_cat = info_soup.find("div", class_="ven_announcement_info").find('table').find_all('tr')
                     for ann_cat in announcement_cat:
@@ -387,6 +397,14 @@ class Announcement(db.Model):
 
         announcements.reverse()
         return announcements
+
+    @staticmethod
+    def get_request_session():
+        s = requests.Session()
+        s.headers = {
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36'
+        }
+        return s
 
 class TelegramSubscriber(db.Model):
     __tablename__ = 'telegram_subscriber'
