@@ -8,6 +8,7 @@ from sqlalchemy import and_
 from sqlalchemy.orm import backref
 from sqlalchemy.ext.associationproxy import association_proxy
 from bs4 import BeautifulSoup
+import cloudscraper
 from app import db, telegram_bot
 from app.search import add_to_index, remove_from_index, query_index
 
@@ -278,7 +279,8 @@ class Company(SearchableMixin, db.Model):
         s.headers = {
             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36'
         }
-        return s
+        scraper = cloudscraper.create_scraper()
+        return scraper
 
 class Announcement(db.Model):
     __tablename__ = 'announcement'
@@ -404,7 +406,8 @@ class Announcement(db.Model):
         s.headers = {
             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36'
         }
-        return s
+        scraper = cloudscraper.create_scraper()
+        return scraper
 
 class TelegramSubscriber(db.Model):
     __tablename__ = 'telegram_subscriber'
